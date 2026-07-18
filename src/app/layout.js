@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import QueryProvider from "@/providers/QueryProvider";
+import { Toaster } from "sonner";
 
 export const metadata = {
   title: "VoyageAI",
@@ -22,6 +23,8 @@ export default function RootLayout({ children }) {
 
           <Footer />
         </QueryProvider>
+        
+        <Toaster theme="dark" position="bottom-right" />
       </body>
     </html>
   );
