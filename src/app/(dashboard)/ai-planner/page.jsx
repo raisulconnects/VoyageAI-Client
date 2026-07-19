@@ -1,15 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { HiOutlineSparkles, HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineCurrencyDollar } from "react-icons/hi";
+import {
+  HiOutlineSparkles,
+  HiOutlineLocationMarker,
+  HiOutlineCalendar,
+  HiOutlineCurrencyDollar,
+  HiOutlinePaperAirplane,
+  HiOutlineSave,
+  HiOutlineUser,
+} from "react-icons/hi";
 import Input from "@/components/common/Input";
+import Modal from "@/components/common/Modal";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function AIPlannerPage() {
+  const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [itinerary, setItinerary] = useState(null);
+  const [formMeta, setFormMeta] = useState({ destination: "", duration: 0, budget: 0 });
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isRefining]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -23,15 +47,76 @@ export default function AIPlannerPage() {
     };
 
     setIsGenerating(true);
-    setResult(null);
-    
+    setItinerary(null);
+    setChatMessages([]);
+
     try {
       const res = await api.post("/ai/plan", data);
-      setResult(res.data.data.itinerary);
+      setItinerary(res.data.data);
+      setFormMeta({ destination: data.destination, duration: data.duration, budget: data.budget });
+      setChatMessages([
+        { id: 1, role: "ai", content: "Here's your itinerary! Want to tweak anything? Tell me what to change and I'll update it." },
+      ]);
+      setShowModal(true);
     } catch (err) {
       toast.error(err.message || "Failed to generate itinerary. Please try again.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRefine = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isRefining || !itinerary) return;
+
+    const userMsg = { id: Date.now(), role: "user", content: chatInput };
+    setChatMessages((prev) => [...prev, userMsg]);
+    const instructions = chatInput;
+    setChatInput("");
+    setIsRefining(true);
+
+    try {
+      const res = await api.post("/ai/refine", { itinerary, instructions });
+      setItinerary(res.data.data);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: "ai", content: "Done! I've updated the itinerary. Check it out above." },
+      ]);
+    } catch (err) {
+      toast.error(err.message || "Failed to refine itinerary.");
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: "ai", content: "Sorry, I couldn't process that change. Please try again." },
+      ]);
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!itinerary) return;
+    setIsSaving(true);
+
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + formMeta.duration);
+
+    try {
+      await api.post("/trips", {
+        title: itinerary.title,
+        destination: formMeta.destination,
+        startDate: today.toISOString(),
+        endDate: endDate.toISOString(),
+        budget: formMeta.budget,
+        itinerary: itinerary.days,
+      });
+      toast.success("Trip saved successfully!");
+      setShowModal(false);
+      router.push("/my-trips");
+    } catch (err) {
+      toast.error(err.message || "Failed to save trip.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -129,67 +214,127 @@ export default function AIPlannerPage() {
           </motion.div>
         </div>
 
-        {/* Output Area */}
+        {/* Output Area — placeholder only */}
         <div className="lg:col-span-7">
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className={`h-full min-h-[500px] glass-card p-6 flex flex-col ${!result && !isGenerating ? 'items-center justify-center text-center' : ''}`}
+            className="h-full min-h-[500px] glass-card p-6 flex flex-col items-center justify-center text-center"
           >
-            {!result && !isGenerating && (
-              <div className="text-slate-500 max-w-sm mx-auto">
-                <div className="text-6xl mb-4">🪄</div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">Ready to plan</h3>
-                <p>Fill out the details on the left and let our AI create the perfect itinerary for you.</p>
-              </div>
-            )}
-
-            {isGenerating && (
-              <div className="flex-1 flex flex-col items-center justify-center">
+            {isGenerating ? (
+              <div className="flex flex-col items-center justify-center">
                 <div className="relative w-24 h-24 mb-8">
                   <div className="absolute inset-0 border-t-4 border-purple-500 rounded-full animate-spin" />
-                  <div className="absolute inset-2 border-r-4 border-blue-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-                  <div className="absolute inset-4 border-b-4 border-emerald-500 rounded-full animate-spin" style={{ animationDuration: '2s' }} />
+                  <div className="absolute inset-2 border-r-4 border-blue-500 rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+                  <div className="absolute inset-4 border-b-4 border-emerald-500 rounded-full animate-spin" style={{ animationDuration: "2s" }} />
                 </div>
                 <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 animate-pulse">
                   Analyzing millions of possibilities...
                 </h3>
                 <p className="text-slate-400 mt-2">Optimizing routes and checking local insights.</p>
               </div>
-            )}
-
-            {result && !isGenerating && (
-              <div className="space-y-6 animate-in fade-in duration-700">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                  <h2 className="text-2xl font-bold text-white">{result.title}</h2>
-                  <button className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-sm font-medium transition-colors border border-blue-500/30">
-                    Save Trip
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  {result.days && result.days.map((day) => (
-                    <div key={day.day} className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-white/10 last:before:hidden">
-                      <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-xs font-bold text-purple-400">
-                        {day.day}
-                      </div>
-                      <h3 className="text-lg font-bold text-white mb-3">{day.title}</h3>
-                      <div className="space-y-3">
-                        {day.activities && day.activities.map((activity, idx) => (
-                          <div key={idx} className="bg-white/5 border border-white/5 rounded-lg p-3 text-slate-300">
-                            {activity}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            ) : (
+              <div className="text-slate-500 max-w-sm mx-auto">
+                <div className="text-6xl mb-4">🪄</div>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">Ready to plan</h3>
+                <p>Fill out the details on the left and let our AI create the perfect itinerary for you.</p>
               </div>
             )}
           </motion.div>
         </div>
       </div>
+
+      {/* Itinerary Modal */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={itinerary?.title} maxWidth="max-w-5xl">
+        {itinerary && (
+          <div className="flex flex-col gap-6">
+            {/* Itinerary Timeline */}
+            <div className="space-y-6">
+              {itinerary.days?.map((day) => (
+                <div key={day.day} className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-white/10 last:before:hidden">
+                  <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-xs font-bold text-purple-400">
+                    {day.day}
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-3">{day.title}</h3>
+                  <div className="space-y-2">
+                    {day.activities?.map((activity, idx) => (
+                      <div key={idx} className="bg-white/5 border border-white/5 rounded-lg p-3 text-slate-300 text-sm">
+                        {activity}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-white/10" />
+
+            {/* Chat to Tweak */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Tweak your itinerary</h3>
+              <div className="max-h-48 overflow-y-auto space-y-3 mb-3">
+                {chatMessages.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`flex max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center ${msg.role === "user" ? "ml-2 bg-blue-600" : "mr-2 bg-purple-600"}`}>
+                        {msg.role === "user" ? <HiOutlineUser className="h-3.5 w-3.5 text-white" /> : <span className="text-xs">✨</span>}
+                      </div>
+                      <div className={`px-3 py-2 rounded-xl text-sm ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-none" : "bg-slate-800 border border-white/10 text-slate-200 rounded-tl-none"}`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {isRefining && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-800 border border-white/10">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              <form onSubmit={handleRefine} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="e.g. Make Day 2 more relaxed, add a food market visit..."
+                  disabled={isRefining}
+                  className="flex-1 bg-slate-800 border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim() || isRefining}
+                  className="p-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+                >
+                  <HiOutlinePaperAirplane className="h-4 w-4 transform rotate-90" />
+                </button>
+              </form>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-white/10" />
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isRefining}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <HiOutlineSave className="h-5 w-5" />
+                {isSaving ? "Saving..." : "Save Trip"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
