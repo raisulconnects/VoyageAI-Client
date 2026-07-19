@@ -2,13 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineHeart, HiHeart } from "react-icons/hi";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function TripCard({ trip }) {
   const [isSaved, setIsSaved] = useState(trip.saved || false);
+  const queryClient = useQueryClient();
 
-  const toggleSave = (e) => {
+  const toggleSave = async (e) => {
     e.preventDefault();
-    setIsSaved(!isSaved);
+    try {
+      setIsSaved(!isSaved);
+      await api.patch(`/trips/${trip._id}/save`);
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["savedTrips"] });
+    } catch (error) {
+      setIsSaved(isSaved);
+      console.error("Failed to toggle save:", error);
+    }
   };
 
   return (

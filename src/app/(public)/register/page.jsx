@@ -143,7 +143,7 @@ export default function RegisterPage() {
           
           <div className="text-center">
              <p className="text-xs text-slate-500">
-               By signing up, you agree to our <a href="#" className="text-slate-400 hover:text-white underline">Terms of Service</a> and <a href="#" className="text-slate-400 hover:text-white underline">Privacy Policy</a>.
+               By signing up, you agree to our <Link href="/terms" className="text-slate-400 hover:text-white underline">Terms of Service</Link> and <Link href="/privacy" className="text-slate-400 hover:text-white underline">Privacy Policy</Link>.
              </p>
           </div>
         </form>
