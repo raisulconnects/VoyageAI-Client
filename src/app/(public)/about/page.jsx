@@ -2,12 +2,22 @@
 
 import { motion } from "framer-motion";
 import { HiOutlineLightBulb, HiOutlineGlobe, HiOutlineUsers } from "react-icons/hi";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function AboutPage() {
+  const { data: globalStats } = useQuery({
+    queryKey: ["globalStats"],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/global");
+      return res.data.data;
+    },
+  });
+
   const stats = [
-    { label: "Destinations Covered", value: "10,000+" },
-    { label: "Active Users", value: "50k+" },
-    { label: "Itineraries Created", value: "1M+" },
+    { label: "Destinations Covered", value: globalStats ? `${globalStats.totalDestinations}+` : "—" },
+    { label: "Active Users", value: globalStats ? `${globalStats.totalUsers}+` : "—" },
+    { label: "Trips Planned", value: globalStats ? `${globalStats.totalTrips}+` : "—" },
   ];
 
   return (

@@ -4,63 +4,79 @@ import { motion } from "framer-motion";
 import { HiOutlineMap, HiOutlineCurrencyDollar, HiOutlineLocationMarker, HiOutlineCalendar } from "react-icons/hi";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import TripCard from "@/components/cards/TripCard";
-
-// Mock Data
-const stats = [
-  { name: "Total Trips", value: "12", icon: HiOutlineMap, color: "text-blue-400", bg: "bg-blue-500/20" },
-  { name: "Countries Visited", value: "8", icon: HiOutlineLocationMarker, color: "text-emerald-400", bg: "bg-emerald-500/20" },
-  { name: "Total Spent", value: "$8,450", icon: HiOutlineCurrencyDollar, color: "text-purple-400", bg: "bg-purple-500/20" },
-  { name: "Upcoming Days", value: "14", icon: HiOutlineCalendar, color: "text-orange-400", bg: "bg-orange-500/20" },
-];
-
-const upcomingTrips = [
-  {
-    id: 1,
-    title: "Summer in Japan",
-    destination: "Tokyo, Kyoto, Osaka",
-    dates: "Jul 15 - Aug 02, 2026",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop",
-    status: "Upcoming",
-    budget: 3500,
-    progress: 80,
-    saved: true
-  },
-  {
-    id: 2,
-    title: "Weekend Getaway",
-    destination: "Banff, Canada",
-    dates: "Sep 10 - Sep 13, 2026",
-    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800&auto=format&fit=crop",
-    status: "Planning",
-    budget: 800,
-    progress: 30,
-    saved: false
-  }
-];
-
-const budgetData = [
-  { name: "Flights", value: 1200 },
-  { name: "Accommodation", value: 1500 },
-  { name: "Food", value: 600 },
-  { name: "Activities", value: 400 },
-];
-
-const expenseData = [
-  { day: "Day 1", amount: 150 },
-  { day: "Day 2", amount: 230 },
-  { day: "Day 3", amount: 180 },
-  { day: "Day 4", amount: 290 },
-  { day: "Day 5", amount: 120 },
-];
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const COLORS = ['#3b82f6', '#10b981', '#a855f7', '#f59e0b'];
 
+function aggregateBudgetBreakdown(trips) {
+  const merged = {};
+  for (const trip of trips) {
+    if (!trip.budgetBreakdown) continue;
+    for (const item of trip.budgetBreakdown) {
+      merged[item.name] = (merged[item.name] || 0) + item.value;
+    }
+  }
+  return Object.entries(merged)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function getLatestExpenses(trips) {
+  const sorted = [...trips]
+    .filter(t => t.expenses && t.expenses.length > 0)
+    .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+  return sorted[0]?.expenses || [];
+}
+
+function formatCurrency(val) {
+  if (val >= 1000) return `$${(val / 1000).toFixed(1)}k`;
+  return `$${val}`;
+}
+
 export default function DashboardPage() {
+  const { user } = useAuth();
+
+  const { data: statsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["dashboardStats"],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/stats");
+      return res.data.data;
+    }
+  });
+
+  const { data: tripsData = [], isLoading: isTripsLoading } = useQuery({
+    queryKey: ["trips"],
+    queryFn: async () => {
+      const res = await api.get("/trips");
+      return res.data.data;
+    }
+  });
+
+  // Calculate dynamic stats
+  const stats = [
+    { name: "Total Trips", value: statsData?.totalTrips || 0, icon: HiOutlineMap, color: "text-blue-400", bg: "bg-blue-500/20" },
+    { name: "Countries Visited", value: statsData?.countriesVisited || 0, icon: HiOutlineLocationMarker, color: "text-emerald-400", bg: "bg-emerald-500/20" },
+    { name: "Total Spent", value: `$${statsData?.totalSpent || 0}`, icon: HiOutlineCurrencyDollar, color: "text-purple-400", bg: "bg-purple-500/20" },
+    { name: "Upcoming Days", value: statsData?.upcomingDays !== null ? statsData?.upcomingDays : "-", icon: HiOutlineCalendar, color: "text-orange-400", bg: "bg-orange-500/20" },
+  ];
+
+  const budgetData = aggregateBudgetBreakdown(tripsData);
+  const totalBudget = budgetData.reduce((sum, item) => sum + item.value, 0);
+  const expenseData = getLatestExpenses(tripsData);
+
+  // Filter for only upcoming trips
+  const upcomingTrips = tripsData
+    .filter(t => new Date(t.startDate) > new Date())
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    .slice(0, 2); // Show top 2
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-        <p className="text-slate-400 mt-1">Welcome back! Here's an overview of your travels.</p>
+        <p className="text-slate-400 mt-1">Welcome back{user?.name ? `, ${user.name}` : ''}! Here's an overview of your travels.</p>
       </div>
 
       {/* Stats Grid */}
@@ -76,7 +92,11 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-400">{stat.name}</p>
-                <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
+                {isStatsLoading ? (
+                  <div className="h-8 w-16 bg-white/10 rounded animate-pulse mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
+                )}
               </div>
               <div className={`p-3 rounded-xl ${stat.bg}`}>
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -99,11 +119,23 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold text-white">Upcoming Trips</h2>
               <a href="/my-trips" className="text-sm font-medium text-blue-400 hover:text-blue-300">View all</a>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {upcomingTrips.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
-              ))}
-            </div>
+            
+            {isTripsLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+              </div>
+            ) : upcomingTrips.length === 0 ? (
+              <div className="glass-card p-8 text-center">
+                <p className="text-slate-400">No upcoming trips planned yet.</p>
+                <a href="/add-destination" className="inline-block mt-4 text-blue-400 hover:text-blue-300">Plan a trip →</a>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {upcomingTrips.map((trip) => (
+                  <TripCard key={trip._id} trip={trip} />
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Daily Expenses Chart */}
@@ -114,21 +146,27 @@ export default function DashboardPage() {
             className="glass-card p-6"
           >
             <h2 className="text-lg font-bold text-white mb-6">Recent Trip Expenses</h2>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expenseData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                  <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                    cursor={{ fill: '#ffffff05' }}
-                  />
-                  <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {expenseData.length === 0 ? (
+              <div className="h-72 flex items-center justify-center text-slate-400">
+                <p>No expense data yet. Add expenses to your trips to see them here.</p>
+              </div>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={expenseData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                      cursor={{ fill: '#ffffff05' }}
+                    />
+                    <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </motion.div>
         </div>
 
@@ -142,45 +180,53 @@ export default function DashboardPage() {
             className="glass-card p-6"
           >
             <h2 className="text-lg font-bold text-white mb-6">Budget Distribution</h2>
-            <div className="h-64 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={budgetData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {budgetData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip 
-                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff' }}
-                     itemStyle={{ color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-white">$3,700</span>
-                <span className="text-xs text-slate-400">Total</span>
+            {budgetData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-slate-400 text-center">
+                <p>No budget data yet.<br />Add a budget breakdown to your trips.</p>
               </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4">
-               {budgetData.map((item, idx) => (
-                 <div key={item.name} className="flex items-center">
-                   <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[idx] }} />
-                   <div>
-                     <p className="text-xs text-slate-400">{item.name}</p>
-                     <p className="text-sm font-semibold text-white">${item.value}</p>
-                   </div>
-                 </div>
-               ))}
-            </div>
+            ) : (
+              <>
+                <div className="h-64 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={budgetData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {budgetData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip 
+                         contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff' }}
+                         itemStyle={{ color: '#fff' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-white">{formatCurrency(totalBudget)}</span>
+                    <span className="text-xs text-slate-400">Total</span>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                   {budgetData.map((item, idx) => (
+                     <div key={item.name} className="flex items-center">
+                       <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[idx] }} />
+                       <div>
+                         <p className="text-xs text-slate-400">{item.name}</p>
+                         <p className="text-sm font-semibold text-white">${item.value}</p>
+                       </div>
+                     </div>
+                   ))}
+                </div>
+              </>
+            )}
           </motion.div>
 
           {/* Quick Actions */}

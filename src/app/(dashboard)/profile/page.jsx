@@ -1,28 +1,46 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { HiOutlineUser, HiOutlineMail, HiOutlineLockClosed, HiOutlineBell } from "react-icons/hi";
 import { useForm } from "react-hook-form";
 import Input from "@/components/common/Input";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
 
 export default function ProfilePage() {
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+  const { user, updateUser } = useAuth();
+  
+  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm({
     defaultValues: {
-      name: "John Doe",
-      email: "john@example.com",
+      name: "",
+      email: "",
+      bio: ""
     }
   });
 
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: user.name || "",
+        email: user.email || "",
+        bio: user.bio || ""
+      });
+    }
+  }, [user, reset]);
+
   const onSubmit = async (data) => {
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      console.log("Profile updated", data);
+      const res = await api.patch("/auth/profile", data);
+      updateUser(res.data.data);
       toast.success("Profile updated successfully");
     } catch (e) {
-      toast.error("Failed to update profile");
+      toast.error(e.response?.data?.message || "Failed to update profile");
     }
   };
+
+  const initials = user?.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -60,7 +78,7 @@ export default function ProfilePage() {
             
             <div className="flex items-center space-x-6 mb-8">
               <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)]">
-                JD
+                {initials}
               </div>
               <div>
                 <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors border border-white/5 mb-2 block">
@@ -76,14 +94,14 @@ export default function ProfilePage() {
                   id="name"
                   label="Full Name"
                   icon={HiOutlineUser}
-                  {...register("name")}
+                  {...register("name", { required: "Name is required" })}
                 />
                 <Input
                   id="email"
                   label="Email Address"
                   type="email"
                   icon={HiOutlineMail}
-                  {...register("email")}
+                  {...register("email", { required: "Email is required" })}
                 />
               </div>
 
@@ -93,6 +111,7 @@ export default function ProfilePage() {
                   rows={4}
                   className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                   placeholder="Tell us a little bit about yourself..."
+                  {...register("bio")}
                 />
               </div>
 

@@ -2,8 +2,14 @@
 
 import { motion } from "framer-motion";
 import { HiOutlineMail, HiOutlineChatAlt2, HiOutlineLocationMarker } from "react-icons/hi";
+import { toast } from "sonner";
 
 export default function ContactPage() {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    toast.info("Coming soon! We're working on this feature.");
+  };
+
   return (
     <div className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-16">
@@ -53,7 +59,10 @@ export default function ContactPage() {
             <div>
               <h3 className="text-lg font-semibold text-white">Live Chat</h3>
               <p className="text-slate-400 mt-1">Available 24/7 for premium members.</p>
-              <button className="text-emerald-400 hover:text-emerald-300 mt-2 inline-block font-medium">
+              <button
+                onClick={() => toast.info("Coming soon! Live chat will be available in a future update.")}
+                className="text-emerald-400 hover:text-emerald-300 mt-2 inline-block font-medium"
+              >
                 Start a conversation
               </button>
             </div>
@@ -83,7 +92,7 @@ export default function ContactPage() {
         >
           <div className="glass-card p-8 md:p-10">
             <h2 className="text-2xl font-bold text-white mb-6">Send us a message</h2>
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-2">First Name</label>
@@ -136,7 +145,7 @@ export default function ContactPage() {
               </div>
 
               <button
-                type="button" // Change to submit when connected to backend
+                type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]"
               >
                 Send Message

@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import QueryProvider from "@/providers/QueryProvider";
+import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
 
 export const metadata = {
@@ -15,13 +16,15 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className="antialiased">
         <QueryProvider>
-          <Navbar />
+          <AuthProvider>
+            <Navbar />
 
-          <main className="pt-20 min-h-screen">
-            {children}
-          </main>
+            <main className="pt-20 min-h-screen">
+              {children}
+            </main>
 
-          <Footer />
+            <Footer />
+          </AuthProvider>
         </QueryProvider>
         
         <Toaster theme="dark" position="bottom-right" />

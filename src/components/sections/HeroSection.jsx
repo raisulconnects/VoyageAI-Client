@@ -3,8 +3,24 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { HiOutlineSparkles, HiOutlineLocationMarker } from "react-icons/hi";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function HeroSection() {
+  const { data: globalStats } = useQuery({
+    queryKey: ["globalStats"],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/global");
+      return res.data.data;
+    },
+  });
+
+  const stats = [
+    { value: globalStats ? `${Math.max(globalStats.totalTrips, 1)}+` : "—", label: "Trips Planned" },
+    { value: globalStats ? `${globalStats.totalDestinations}+` : "—", label: "Destinations" },
+    { value: globalStats?.averageRating ? `${globalStats.averageRating}★` : "—", label: "User Rating" },
+  ];
+
   return (
     <div className="relative overflow-hidden pt-24 pb-32 lg:pt-36 lg:pb-48">
       {/* Background glowing orbs */}
@@ -81,11 +97,7 @@ export default function HeroSection() {
           transition={{ duration: 0.5, delay: 0.45 }}
           className="mt-16 flex flex-wrap justify-center gap-12"
         >
-          {[
-            { value: "50K+", label: "Trips Planned" },
-            { value: "120+", label: "Destinations" },
-            { value: "4.9★", label: "User Rating" },
-          ].map((stat) => (
+          {stats.map((stat) => (
             <div key={stat.label} className="text-center">
               <p className="text-3xl font-extrabold text-white">{stat.value}</p>
               <p className="text-sm text-slate-400 mt-1">{stat.label}</p>

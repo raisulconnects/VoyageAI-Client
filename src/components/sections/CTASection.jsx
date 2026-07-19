@@ -3,8 +3,18 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { HiOutlineSparkles } from "react-icons/hi";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function CTASection() {
+  const { data: globalStats } = useQuery({
+    queryKey: ["globalStats"],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/global");
+      return res.data.data;
+    },
+  });
+
   return (
     <section className="py-24">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +41,7 @@ export default function CTASection() {
             </h2>
 
             <p className="text-lg text-slate-400 max-w-xl mx-auto mb-10">
-              Join over 50,000 travelers who use VoyageAI to plan unforgettable trips. 
+              Join over {globalStats?.totalUsers ? `${globalStats.totalUsers} travelers` : "travelers"} who use VoyageAI to plan unforgettable trips. 
               Sign up free and plan your first trip in minutes.
             </p>
 

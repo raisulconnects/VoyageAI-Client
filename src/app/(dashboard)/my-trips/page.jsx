@@ -5,60 +5,23 @@ import { useState } from "react";
 import TripCard from "@/components/cards/TripCard";
 import { HiOutlinePlus, HiOutlineFilter } from "react-icons/hi";
 import Link from "next/link";
-
-const mockTrips = [
-  {
-    id: 1,
-    title: "Summer in Japan",
-    destination: "Tokyo, Kyoto, Osaka",
-    dates: "Jul 15 - Aug 02, 2026",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop",
-    status: "Upcoming",
-    budget: 3500,
-    progress: 80,
-    saved: true
-  },
-  {
-    id: 2,
-    title: "Weekend Getaway",
-    destination: "Banff, Canada",
-    dates: "Sep 10 - Sep 13, 2026",
-    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800&auto=format&fit=crop",
-    status: "Planning",
-    budget: 800,
-    progress: 30,
-    saved: false
-  },
-  {
-    id: 3,
-    title: "Eurotrip 2025",
-    destination: "Paris, Rome, Barcelona",
-    dates: "May 01 - May 21, 2025",
-    image: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=800&auto=format&fit=crop",
-    status: "Completed",
-    budget: 5200,
-    progress: 100,
-    saved: true
-  },
-  {
-    id: 4,
-    title: "Tropical Escape",
-    destination: "Bali, Indonesia",
-    dates: "Dec 10 - Dec 24, 2026",
-    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=800&auto=format&fit=crop",
-    status: "Planning",
-    budget: 2500,
-    progress: 10,
-    saved: false
-  }
-];
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function MyTripsPage() {
   const [filter, setFilter] = useState("All");
 
+  const { data: trips = [], isLoading } = useQuery({
+    queryKey: ["trips"],
+    queryFn: async () => {
+      const res = await api.get("/trips");
+      return res.data.data;
+    }
+  });
+
   const filteredTrips = filter === "All" 
-    ? mockTrips 
-    : mockTrips.filter(trip => trip.status === filter);
+    ? trips 
+    : trips.filter(trip => trip.status === filter);
 
   return (
     <div className="space-y-8">
@@ -100,20 +63,26 @@ export default function MyTripsPage() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTrips.map((trip, idx) => (
-          <motion.div
-            key={trip.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: idx * 0.1 }}
-          >
-            <TripCard trip={trip} />
-          </motion.div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTrips.map((trip, idx) => (
+            <motion.div
+              key={trip._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: idx * 0.1 }}
+            >
+              <TripCard trip={trip} />
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-      {filteredTrips.length === 0 && (
+      {!isLoading && filteredTrips.length === 0 && (
         <div className="text-center py-20">
           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🌍</span>

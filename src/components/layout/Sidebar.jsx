@@ -12,9 +12,12 @@ import {
   HiOutlineChatAlt,
   HiOutlineUser
 } from "react-icons/hi";
+import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: HiOutlineHome },
@@ -26,6 +29,8 @@ export default function Sidebar() {
     { name: "AI Chat", href: "/ai-chat", icon: HiOutlineChatAlt },
     { name: "Profile", href: "/profile", icon: HiOutlineUser },
   ];
+
+  const initials = user?.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
 
   return (
     <div className="w-64 flex-shrink-0 border-r border-white/10 bg-slate-900/50 backdrop-blur-md hidden md:flex flex-col h-[calc(100vh-80px)] sticky top-20">
@@ -56,17 +61,27 @@ export default function Sidebar() {
       </div>
       
       {/* Bottom User Area */}
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center px-4 py-3 bg-white/5 rounded-xl border border-white/5 cursor-pointer hover:bg-white/10 transition-colors">
-          <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
-            JD
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">John Doe</p>
-            <p className="text-xs text-slate-400">Pro Plan</p>
-          </div>
+      {user && (
+        <div className="p-4 border-t border-white/10">
+          <Link href="/profile" className="block">
+            <div className="flex items-center px-4 py-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+              {user.avatarUrl ? (
+                <div className="relative h-8 w-8 rounded-full overflow-hidden flex-shrink-0">
+                  <Image src={user.avatarUrl} alt="Avatar" fill className="object-cover" />
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {initials}
+                </div>
+              )}
+              <div className="ml-3 overflow-hidden">
+                <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                <p className="text-xs text-slate-400 truncate">{user.plan ? `${user.plan} Plan` : user.email}</p>
+              </div>
+            </div>
+          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 }

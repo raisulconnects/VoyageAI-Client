@@ -5,27 +5,38 @@ import { HiOutlineLocationMarker, HiOutlineStar, HiOutlineClock, HiOutlineCurren
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-
-// Mock Data
-const destinationData = {
-  1: {
-    name: "Kyoto, Japan",
-    description: "Experience the perfect blend of ancient traditions and breathtaking nature. Kyoto served as Japan's capital and the emperor's residence from 794 until 1868. It is one of the country's ten largest cities with a population of 1.5 million people and a modern face. Over the centuries, Kyoto was destroyed by many wars and fires, but due to its exceptional historic value, the city was dropped from the list of target cities for the atomic bomb and escaped destruction during World War II.",
-    longDescription: "Countless temples, shrines, and other historically priceless structures survive in the city today. Beyond its history, Kyoto is a vibrant modern city where traditional crafts thrive alongside cutting-edge technology.",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200&auto=format&fit=crop",
-    rating: 4.9,
-    reviews: 1240,
-    bestTimeToVisit: "Spring (March-May) or Fall (Sept-Nov)",
-    estimatedDailyBudget: "$150 - $250",
-    category: "Cultural",
-    highlights: ["Fushimi Inari Taisha", "Kinkaku-ji (Golden Pavilion)", "Arashiyama Bamboo Grove", "Gion District"]
-  }
-};
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function DestinationDetailsPage() {
   const params = useParams();
-  // Provide fallback data if id is not 1 for the mock
-  const dest = destinationData[params.id] || destinationData[1];
+  
+  const { data: dest, isLoading } = useQuery({
+    queryKey: ["destination", params.id],
+    queryFn: async () => {
+      const res = await api.get(`/destinations/${params.id}`);
+      return res.data.data;
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="py-20 flex justify-center h-screen items-center">
+        <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!dest) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center h-screen">
+        <h2 className="text-2xl text-white mb-4">Destination Not Found</h2>
+        <Link href="/explore" className="text-blue-400 hover:text-blue-300">
+          ← Back to Explore
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="py-20">
@@ -33,7 +44,7 @@ export default function DestinationDetailsPage() {
       <div className="relative h-[60vh] w-full mt-[-80px]">
         <div className="absolute inset-0 bg-slate-900">
           <Image
-            src={dest.image}
+            src={dest.image || "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e"}
             alt={dest.name}
             fill
             className="object-cover opacity-60"
@@ -62,7 +73,7 @@ export default function DestinationDetailsPage() {
               </div>
               <div className="flex items-center">
                 <HiOutlineLocationMarker className="h-5 w-5 mr-1.5" />
-                <span>Japan</span>
+                <span>{dest.country || "Worldwide"}</span>
               </div>
             </div>
           </motion.div>
@@ -83,23 +94,27 @@ export default function DestinationDetailsPage() {
               <h2 className="text-2xl font-bold text-white mb-4">About this destination</h2>
               <div className="prose prose-invert max-w-none text-slate-300">
                 <p className="text-lg leading-relaxed mb-4">{dest.description}</p>
-                <p className="leading-relaxed">{dest.longDescription}</p>
+                {dest.longDescription && (
+                  <p className="leading-relaxed">{dest.longDescription}</p>
+                )}
               </div>
             </section>
 
-            <section>
-              <h2 className="text-2xl font-bold text-white mb-6">Top Highlights</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {dest.highlights.map((item, idx) => (
-                  <div key={idx} className="glass-card p-4 flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
-                      <span className="text-blue-400 font-bold">{idx + 1}</span>
+            {dest.highlights && dest.highlights.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-white mb-6">Top Highlights</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {dest.highlights.map((item, idx) => (
+                    <div key={idx} className="glass-card p-4 flex items-center space-x-3">
+                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+                        <span className="text-blue-400 font-bold">{idx + 1}</span>
+                      </div>
+                      <span className="text-slate-200 font-medium">{item}</span>
                     </div>
-                    <span className="text-slate-200 font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
+            )}
           </motion.div>
 
           {/* Sidebar */}
@@ -119,7 +134,7 @@ export default function DestinationDetailsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Best Time To Visit</p>
-                    <p className="font-medium text-slate-200 mt-1">{dest.bestTimeToVisit}</p>
+                    <p className="font-medium text-slate-200 mt-1">{dest.bestTimeToVisit || "Year-round"}</p>
                   </div>
                 </div>
 
@@ -129,7 +144,7 @@ export default function DestinationDetailsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Estimated Daily Budget</p>
-                    <p className="font-medium text-slate-200 mt-1">{dest.estimatedDailyBudget}</p>
+                    <p className="font-medium text-slate-200 mt-1">{dest.estimatedDailyBudget || "Varies"}</p>
                   </div>
                 </div>
               </div>

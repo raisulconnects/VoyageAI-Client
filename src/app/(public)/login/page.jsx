@@ -9,6 +9,7 @@ import { HiOutlineMail, HiOutlineLockClosed } from "react-icons/hi";
 import { toast } from "sonner";
 import Input from "@/components/common/Input";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -17,6 +18,7 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   
   const {
     register,
@@ -28,15 +30,14 @@ export default function LoginPage() {
 
   const onSubmit = async (data) => {
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Login data:", data);
-      toast.success("Successfully logged in!");
+      await login({ email: data.email, password: data.password });
+      toast.success("Welcome back!");
       router.push("/dashboard");
     } catch (error) {
-      toast.error("Failed to login. Please try again.");
+      toast.error(error.message || "Invalid email or password.");
     }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">

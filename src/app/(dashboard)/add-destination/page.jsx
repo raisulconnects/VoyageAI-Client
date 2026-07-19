@@ -7,6 +7,7 @@ import * as z from "zod";
 import { HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineCurrencyDollar } from "react-icons/hi";
 import { toast } from "sonner";
 import Input from "@/components/common/Input";
+import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const destinationSchema = z.object({
@@ -31,13 +32,11 @@ export default function AddDestinationPage() {
 
   const onSubmit = async (data) => {
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("New destination data:", data);
+      await api.post("/trips", data);
       toast.success("Destination added successfully!");
       router.push("/my-trips");
     } catch (error) {
-      toast.error("Failed to add destination. Please try again.");
+      toast.error(error.message || "Failed to add destination. Please try again.");
     }
   };
 

@@ -3,34 +3,26 @@
 import { motion } from "framer-motion";
 import TripCard from "@/components/cards/TripCard";
 import { HiOutlineSearch } from "react-icons/hi";
-
-// Mock Data filtering only saved trips
-const savedTrips = [
-  {
-    id: 1,
-    title: "Summer in Japan",
-    destination: "Tokyo, Kyoto, Osaka",
-    dates: "Jul 15 - Aug 02, 2026",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop",
-    status: "Upcoming",
-    budget: 3500,
-    progress: 80,
-    saved: true
-  },
-  {
-    id: 3,
-    title: "Eurotrip 2025",
-    destination: "Paris, Rome, Barcelona",
-    dates: "May 01 - May 21, 2025",
-    image: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=800&auto=format&fit=crop",
-    status: "Completed",
-    budget: 5200,
-    progress: 100,
-    saved: true
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { useState } from "react";
 
 export default function SavedTripsPage() {
+  const [search, setSearch] = useState("");
+
+  const { data: savedTrips = [], isLoading } = useQuery({
+    queryKey: ["savedTrips"],
+    queryFn: async () => {
+      const res = await api.get("/trips/saved");
+      return res.data.data;
+    }
+  });
+
+  const filteredTrips = savedTrips.filter(trip => 
+    trip.title.toLowerCase().includes(search.toLowerCase()) || 
+    trip.destination.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -45,26 +37,34 @@ export default function SavedTripsPage() {
           </div>
           <input
             type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="block w-full pl-9 pr-3 py-2 bg-slate-900/50 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
             placeholder="Search saved trips..."
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {savedTrips.map((trip, idx) => (
-          <motion.div
-            key={trip.id}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: idx * 0.1 }}
-          >
-            <TripCard trip={trip} />
-          </motion.div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTrips.map((trip, idx) => (
+            <motion.div
+              key={trip._id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: idx * 0.1 }}
+            >
+              <TripCard trip={trip} />
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-      {savedTrips.length === 0 && (
+      {!isLoading && filteredTrips.length === 0 && (
         <div className="text-center py-20">
           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">❤️</span>

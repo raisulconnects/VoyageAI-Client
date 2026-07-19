@@ -4,27 +4,35 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { HiOutlineSparkles, HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineCurrencyDollar } from "react-icons/hi";
 import Input from "@/components/common/Input";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 export default function AIPlannerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState(null);
 
-  const handleGenerate = (e) => {
+  const handleGenerate = async (e) => {
     e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+      destination: formData.get("destination"),
+      duration: Number(formData.get("duration")),
+      budget: Number(formData.get("budget")),
+      travelStyle: formData.get("travelStyle"),
+      specialRequests: formData.get("specialRequests"),
+    };
+
     setIsGenerating(true);
+    setResult(null);
     
-    // Mock AI generation delay
-    setTimeout(() => {
+    try {
+      const res = await api.post("/ai/plan", data);
+      setResult(res.data.data.itinerary);
+    } catch (err) {
+      toast.error(err.message || "Failed to generate itinerary. Please try again.");
+    } finally {
       setIsGenerating(false);
-      setResult({
-        title: "7-Day Adventure in Kyoto",
-        days: [
-          { day: 1, title: "Arrival & Gion District", activities: ["Check-in at Ryokan", "Walk through Yasaka Shrine", "Dinner in Pontocho"] },
-          { day: 2, title: "Temples & Bamboo", activities: ["Arashiyama Bamboo Grove", "Tenryu-ji Temple", "Monkey Park Iwatayama"] },
-          { day: 3, title: "Golden Pavilion", activities: ["Kinkaku-ji", "Ryoan-ji Rock Garden", "Traditional Tea Ceremony"] },
-        ]
-      });
-    }, 2500);
+    }
   };
 
   return (
@@ -51,6 +59,7 @@ export default function AIPlannerPage() {
             <form onSubmit={handleGenerate} className="space-y-6">
               <Input
                 id="destination"
+                name="destination"
                 label="Where do you want to go?"
                 placeholder="e.g. Kyoto, Japan"
                 icon={HiOutlineLocationMarker}
@@ -60,6 +69,7 @@ export default function AIPlannerPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   id="duration"
+                  name="duration"
                   label="Duration (days)"
                   type="number"
                   placeholder="7"
@@ -68,6 +78,7 @@ export default function AIPlannerPage() {
                 />
                 <Input
                   id="budget"
+                  name="budget"
                   label="Budget ($)"
                   type="number"
                   placeholder="2000"
@@ -78,7 +89,7 @@ export default function AIPlannerPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Travel Style</label>
-                <select className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none">
+                <select name="travelStyle" className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none">
                   <option value="balanced">Balanced (Mix of everything)</option>
                   <option value="cultural">Cultural & Historical</option>
                   <option value="relaxing">Relaxing & Leisure</option>
@@ -90,6 +101,7 @@ export default function AIPlannerPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Any special requests?</label>
                 <textarea
+                  name="specialRequests"
                   rows={3}
                   className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"
                   placeholder="e.g. Vegetarian food only, no early mornings..."
@@ -157,14 +169,14 @@ export default function AIPlannerPage() {
                 </div>
 
                 <div className="space-y-6">
-                  {result.days.map((day) => (
+                  {result.days && result.days.map((day) => (
                     <div key={day.day} className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-white/10 last:before:hidden">
                       <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-xs font-bold text-purple-400">
                         {day.day}
                       </div>
                       <h3 className="text-lg font-bold text-white mb-3">{day.title}</h3>
                       <div className="space-y-3">
-                        {day.activities.map((activity, idx) => (
+                        {day.activities && day.activities.map((activity, idx) => (
                           <div key={idx} className="bg-white/5 border border-white/5 rounded-lg p-3 text-slate-300">
                             {activity}
                           </div>

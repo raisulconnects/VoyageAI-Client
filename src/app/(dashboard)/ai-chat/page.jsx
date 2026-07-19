@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { HiOutlinePaperAirplane, HiOutlineSparkles, HiOutlineUser } from "react-icons/hi";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 export default function AIChatPage() {
   const [messages, setMessages] = useState([
@@ -20,27 +22,39 @@ export default function AIChatPage() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     const userMessage = { id: Date.now(), role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
+    
+    // Store current input to send, then clear
+    const currentInput = input;
     setInput("");
     setIsTyping(true);
 
-    // Mock AI response
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      // Map UI history to backend expected format
+      const historyToSend = messages.map(msg => ({
+        role: msg.role === "ai" ? "model" : "user",
+        content: msg.content
+      }));
+
+      const res = await api.post("/ai/chat", { 
+        message: currentInput, 
+        history: historyToSend 
+      });
+
       setMessages(prev => [
         ...prev, 
-        { 
-          id: Date.now(), 
-          role: "ai", 
-          content: "That sounds like a great idea! Based on your saved trip to Japan, I'd highly recommend checking out the Nishiki Market in Kyoto for some incredible street food. It's often called 'Kyoto's Kitchen'." 
-        }
+        { id: Date.now(), role: "ai", content: res.data.data.reply }
       ]);
-    }, 1500);
+    } catch (err) {
+      toast.error(err.message || "Failed to get AI response.");
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

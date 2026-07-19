@@ -9,6 +9,7 @@ import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser } from "react-icons/h
 import { toast } from "sonner";
 import Input from "@/components/common/Input";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -22,6 +23,7 @@ const registerSchema = z.object({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register: registerUser } = useAuth();
   
   const {
     register,
@@ -33,15 +35,14 @@ export default function RegisterPage() {
 
   const onSubmit = async (data) => {
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Registration data:", data);
+      await registerUser({ name: data.name, email: data.email, password: data.password });
       toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (error) {
-      toast.error("Failed to create account. Please try again.");
+      toast.error(error.message || "Failed to create account. Please try again.");
     }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
