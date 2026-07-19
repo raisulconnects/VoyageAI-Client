@@ -12,7 +12,7 @@ export default function TripCard({ trip }) {
   };
 
   return (
-    <Link href={`/dashboard/trips/${trip.id}`} className="group block">
+    <Link href={`/dashboard/trips/${trip._id}`} className="group block">
       <div className="glass-card overflow-hidden hover:ring-1 hover:ring-blue-500/50 transition-all h-full flex flex-col relative">
         
         {/* Save Button */}
@@ -29,13 +29,17 @@ export default function TripCard({ trip }) {
 
         <div className="relative h-48 overflow-hidden flex-shrink-0">
           <div className="absolute inset-0 bg-slate-800 animate-pulse" />
-          <Image
-            src={trip.image}
-            alt={trip.title}
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-110"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          {trip.coverImage ? (
+            <Image
+              src={trip.coverImage}
+              alt={trip.title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-slate-600 text-4xl">🌍</div>
+          )}
           <div className="absolute bottom-4 left-4">
             <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md ${
               trip.status === "Upcoming" 
@@ -61,7 +65,8 @@ export default function TripCard({ trip }) {
           
           <div className="flex items-center text-slate-400 text-sm mb-4">
             <HiOutlineCalendar className="mr-1.5 h-4 w-4" />
-            {trip.dates}
+            {new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {trip.endDate && ` – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
           </div>
           
           <div className="mt-auto pt-4 border-t border-white/10 flex items-center justify-between">

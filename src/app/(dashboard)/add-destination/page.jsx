@@ -7,6 +7,7 @@ import * as z from "zod";
 import { HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineCurrencyDollar } from "react-icons/hi";
 import { toast } from "sonner";
 import Input from "@/components/common/Input";
+import ImageUpload from "@/components/common/ImageUpload";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +18,7 @@ const destinationSchema = z.object({
   endDate: z.string().min(1, "End date is required."),
   budget: z.string().min(1, "Budget is required."),
   notes: z.string().optional(),
+  coverImage: z.string().optional(),
 });
 
 export default function AddDestinationPage() {
@@ -25,10 +27,17 @@ export default function AddDestinationPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(destinationSchema),
+    defaultValues: {
+      coverImage: "",
+    },
   });
+
+  const coverImage = watch("coverImage");
 
   const onSubmit = async (data) => {
     try {
@@ -54,6 +63,11 @@ export default function AddDestinationPage() {
         className="glass-card p-6 md:p-8"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <ImageUpload
+            value={coverImage}
+            onChange={(url) => setValue("coverImage", url)}
+          />
+
           <Input
             id="title"
             label="Trip Title"

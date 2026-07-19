@@ -104,14 +104,16 @@ export default function ManageDestinationsPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-4">
-                        <div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 bg-slate-800">
-                          {dest.image && (
+                        <div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 bg-slate-800 flex items-center justify-center">
+                          {dest.coverImage ? (
                             <Image
-                              src={dest.image}
+                              src={dest.coverImage}
                               alt={dest.title}
                               fill
                               className="object-cover"
                             />
+                          ) : (
+                            <span className="text-xl">🌍</span>
                           )}
                         </div>
                         <div>
@@ -134,12 +136,12 @@ export default function ManageDestinationsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-3">
-                        <button className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors" title="View Details">
+                        <Link href={`/dashboard/trips/${dest._id}`} className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors" title="View Details">
                           <HiOutlineEye className="h-4 w-4" />
-                        </button>
-                        <button className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors" title="Edit">
+                        </Link>
+                        <Link href={`/dashboard/trips/${dest._id}/edit`} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors" title="Edit">
                           <HiOutlinePencilAlt className="h-4 w-4" />
-                        </button>
+                        </Link>
                         <button onClick={() => handleDelete(dest._id)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors" title="Delete">
                           <HiOutlineTrash className="h-4 w-4" />
                         </button>

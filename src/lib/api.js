@@ -50,6 +50,7 @@ const fetchApi = async (endpoint, options = {}) => {
 const api = {
   get: (endpoint, options) => fetchApi(endpoint, { ...options, method: "GET" }),
   post: (endpoint, bodyData, options) => fetchApi(endpoint, { ...options, method: "POST", body: JSON.stringify(bodyData) }),
+  put: (endpoint, bodyData, options) => fetchApi(endpoint, { ...options, method: "PUT", body: JSON.stringify(bodyData) }),
   patch: (endpoint, bodyData, options) => fetchApi(endpoint, { ...options, method: "PATCH", body: JSON.stringify(bodyData) }),
   delete: (endpoint, options) => fetchApi(endpoint, { ...options, method: "DELETE" }),
 };

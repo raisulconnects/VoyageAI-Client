@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { HiOutlineUser, HiOutlineMail, HiOutlineLockClosed, HiOutlineBell } from "react-icons/hi";
+import { HiOutlineUser, HiOutlineMail } from "react-icons/hi";
 import { useForm } from "react-hook-form";
+import Image from "next/image";
 import Input from "@/components/common/Input";
+import ImageUpload from "@/components/common/ImageUpload";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
-  
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
+
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm({
     defaultValues: {
       name: "",
@@ -27,12 +30,16 @@ export default function ProfilePage() {
         email: user.email || "",
         bio: user.bio || ""
       });
+      setAvatarUrl(user.avatarUrl || "");
     }
   }, [user, reset]);
 
   const onSubmit = async (data) => {
     try {
-      const res = await api.patch("/auth/profile", data);
+      const res = await api.patch("/auth/profile", {
+        ...data,
+        avatarUrl,
+      });
       updateUser(res.data.data);
       toast.success("Profile updated successfully");
     } catch (e) {
@@ -51,19 +58,11 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Left Nav (could be separated later) */}
+        {/* Left Nav */}
         <div className="md:col-span-1 space-y-2">
           <button className="w-full flex items-center px-4 py-3 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-xl text-sm font-medium transition-colors">
             <HiOutlineUser className="mr-3 h-5 w-5" />
             General Information
-          </button>
-          <button className="w-full flex items-center px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white border border-transparent rounded-xl text-sm font-medium transition-colors">
-            <HiOutlineLockClosed className="mr-3 h-5 w-5" />
-            Security & Password
-          </button>
-          <button className="w-full flex items-center px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white border border-transparent rounded-xl text-sm font-medium transition-colors">
-            <HiOutlineBell className="mr-3 h-5 w-5" />
-            Notifications
           </button>
         </div>
 
@@ -76,15 +75,29 @@ export default function ProfilePage() {
           >
             <h2 className="text-xl font-bold text-white mb-6">General Information</h2>
             
+            {/* Avatar Section */}
             <div className="flex items-center space-x-6 mb-8">
-              <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)]">
-                {initials}
+              <div className="relative h-20 w-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/10 shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt="Avatar"
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                    {initials}
+                  </div>
+                )}
               </div>
-              <div>
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors border border-white/5 mb-2 block">
-                  Change Avatar
-                </button>
-                <p className="text-xs text-slate-400">JPG, GIF or PNG. Max size of 800K</p>
+              <div className="flex-1">
+                <ImageUpload
+                  value={avatarUrl}
+                  onChange={setAvatarUrl}
+                  label=""
+                />
               </div>
             </div>
 
