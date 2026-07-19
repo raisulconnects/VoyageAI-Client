@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { HiOutlinePaperAirplane, HiOutlineSparkles, HiOutlineUser } from "react-icons/hi";
 import api from "@/lib/api";
@@ -12,16 +12,6 @@ export default function AIChatPage() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -35,10 +25,12 @@ export default function AIChatPage() {
     setIsTyping(true);
 
     try {
-      // Map UI history to backend expected format
-      const historyToSend = messages.map(msg => ({
+      // Build history including the current user message, skip initial AI greeting
+      const allMessages = [...messages, userMessage];
+      const firstUserIdx = allMessages.findIndex((m) => m.role === "user");
+      const historyToSend = allMessages.slice(firstUserIdx).map((msg) => ({
         role: msg.role === "ai" ? "model" : "user",
-        content: msg.content
+        content: msg.content,
       }));
 
       const res = await api.post("/ai/chat", { 
@@ -118,7 +110,7 @@ export default function AIChatPage() {
               </div>
             </motion.div>
           )}
-          <div ref={messagesEndRef} />
+
         </div>
 
         {/* Input Area */}
