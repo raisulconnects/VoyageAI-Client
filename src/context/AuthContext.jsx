@@ -7,43 +7,36 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // true until we've checked localStorage
+  const [loading, setLoading] = useState(true);
 
-  // On mount — restore user from token
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("voyage_token") : null;
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     api
       .get("/auth/me")
       .then((res) => setUser(res.data.data))
-      .catch(() => {
-        localStorage.removeItem("voyage_token");
-        setUser(null);
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async ({ email, password }) => {
     const res = await api.post("/auth/login", { email, password });
-    const { token, user } = res.data.data;
-    localStorage.setItem("voyage_token", token);
+    const { user } = res.data.data;
     setUser(user);
     return user;
   }, []);
 
   const register = useCallback(async ({ name, email, password }) => {
     const res = await api.post("/auth/register", { name, email, password });
-    const { token, user } = res.data.data;
-    localStorage.setItem("voyage_token", token);
+    const { user } = res.data.data;
     setUser(user);
     return user;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("voyage_token");
+  const logout = useCallback(async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Ignore errors — clear state regardless
+    }
     setUser(null);
   }, []);
 

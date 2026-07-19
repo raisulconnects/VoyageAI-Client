@@ -21,14 +21,11 @@ const fetchApi = async (endpoint, options = {}) => {
     ...fetchOptions.headers,
   };
 
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("voyage_token");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
-
-  const response = await fetch(url, { ...fetchOptions, headers });
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers,
+    credentials: "include",
+  });
 
   let data;
   try {
