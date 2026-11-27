@@ -1,0 +1,574 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-27T10:22:05.171Z",
+  "title": "Design System: VoyageAI",
+  "extensions": {
+    "colorMeta": {
+      "board": {
+        "role": "neutral",
+        "displayName": "Aged Board",
+        "canonical": "#efe6d2",
+        "cssVar": "--color-board",
+        "tonalRamp": [
+          "#57534c",
+          "#837d72",
+          "#aea798",
+          "#d5cdbb",
+          "#efe6d2",
+          "#f3ecdd",
+          "#f6f0e4",
+          "#f8f4ec"
+        ]
+      },
+      "board-deep": {
+        "role": "neutral",
+        "displayName": "Deep Board",
+        "canonical": "#e7dcc4",
+        "cssVar": "--color-board-deep",
+        "tonalRamp": [
+          "#555047",
+          "#7f786b",
+          "#a8a08f",
+          "#cec4af",
+          "#e7dcc4",
+          "#eee5d3",
+          "#f2ecde",
+          "#f7f3e9"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Paper",
+        "canonical": "#f7f2e7",
+        "cssVar": "--color-field",
+        "tonalRamp": [
+          "#5a5752",
+          "#87837d",
+          "#b4afa7",
+          "#dcd7cd",
+          "#f7f2e7",
+          "#f8f4ea",
+          "#f9f5ec",
+          "#faf6ef"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#161412",
+        "cssVar": "--color-ink",
+        "tonalRamp": [
+          "#161412",
+          "#161412",
+          "#161412",
+          "#161412",
+          "#161412",
+          "#666360",
+          "#9f9c97",
+          "#d8d5cf"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#3d362d",
+        "cssVar": "--color-ink-soft",
+        "tonalRamp": [
+          "#221e1a",
+          "#2a2520",
+          "#312c25",
+          "#38322a",
+          "#3d362d",
+          "#7f7a71",
+          "#aeaaa2",
+          "#dedad3"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Umber Grey",
+        "canonical": "#5f5649",
+        "cssVar": "--color-muted",
+        "tonalRamp": [
+          "#2c2823",
+          "#3b352e",
+          "#494239",
+          "#564e42",
+          "#5f5649",
+          "#958e83",
+          "#bcb7ad",
+          "#e3dfd7"
+        ]
+      },
+      "placeholder": {
+        "role": "neutral",
+        "displayName": "Placeholder",
+        "canonical": "#6e6557",
+        "cssVar": "--color-placeholder",
+        "tonalRamp": [
+          "#302c27",
+          "#423d35",
+          "#544d42",
+          "#635b4f",
+          "#6e6557",
+          "#9f988d",
+          "#c2bdb3",
+          "#e5e1d9"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule Tan",
+        "canonical": "#c9bb9e",
+        "cssVar": "--color-rule",
+        "tonalRamp": [
+          "#4c463c",
+          "#706858",
+          "#938974",
+          "#b4a78d",
+          "#c9bb9e",
+          "#dad0bb",
+          "#e6dfcf",
+          "#f3eee4"
+        ]
+      },
+      "smoke": {
+        "role": "neutral",
+        "displayName": "Smoke",
+        "canonical": "#a69f92",
+        "cssVar": "--color-smoke",
+        "tonalRamp": [
+          "#413e38",
+          "#5e5a52",
+          "#7b756c",
+          "#958e83",
+          "#a69f92",
+          "#c3beb3",
+          "#d8d4ca",
+          "#edeae2"
+        ]
+      },
+      "crimson": {
+        "role": "primary",
+        "displayName": "Du Bois Crimson",
+        "canonical": "#b8232f",
+        "cssVar": "--color-crimson",
+        "tonalRamp": [
+          "#47191b",
+          "#671c21",
+          "#871f26",
+          "#a5212c",
+          "#b8232f",
+          "#cf6d73",
+          "#e0a2a3",
+          "#f0d7d3"
+        ]
+      },
+      "crimson-deep": {
+        "role": "primary",
+        "displayName": "Deep Crimson",
+        "canonical": "#961b25",
+        "cssVar": "--color-crimson-deep",
+        "tonalRamp": [
+          "#3c1618",
+          "#56181c",
+          "#70191f",
+          "#871a23",
+          "#961b25",
+          "#b9686c",
+          "#d29f9f",
+          "#ebd6d2"
+        ]
+      },
+      "crimson-wash": {
+        "role": "primary",
+        "displayName": "Crimson Wash",
+        "canonical": "#f2d7d2",
+        "cssVar": "--color-crimson-wash",
+        "tonalRamp": [
+          "#584f4c",
+          "#847672",
+          "#b09d98",
+          "#d8c0bb",
+          "#f2d7d2",
+          "#f5e2dd",
+          "#f7eae4",
+          "#f9f2ec"
+        ]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "Ochre Gold",
+        "canonical": "#d99a1e",
+        "cssVar": "--color-gold",
+        "tonalRamp": [
+          "#513c16",
+          "#785718",
+          "#9f721a",
+          "#c28a1d",
+          "#d99a1e",
+          "#e5bb68",
+          "#edd29c",
+          "#f5e9d1"
+        ]
+      },
+      "gold-wash": {
+        "role": "secondary",
+        "displayName": "Gold Wash",
+        "canonical": "#f4e2b8",
+        "cssVar": "--color-gold-wash",
+        "tonalRamp": [
+          "#595244",
+          "#857b65",
+          "#b1a486",
+          "#d9c9a4",
+          "#f4e2b8",
+          "#f6e9cc",
+          "#f8efda",
+          "#f9f4e8"
+        ]
+      },
+      "emerald": {
+        "role": "tertiary",
+        "displayName": "Ledger Emerald",
+        "canonical": "#1f6a4a",
+        "cssVar": "--color-emerald",
+        "tonalRamp": [
+          "#192e23",
+          "#1b3f2e",
+          "#1c5039",
+          "#1e6043",
+          "#1f6a4a",
+          "#6c9b84",
+          "#a2bfae",
+          "#d9e2d7"
+        ]
+      },
+      "emerald-wash": {
+        "role": "tertiary",
+        "displayName": "Emerald Wash",
+        "canonical": "#d4e3d6",
+        "cssVar": "--color-emerald-wash",
+        "tonalRamp": [
+          "#4f524d",
+          "#757c74",
+          "#9ba59b",
+          "#bdcabe",
+          "#d4e3d6",
+          "#e1eadf",
+          "#ebefe6",
+          "#f4f4ec"
+        ]
+      },
+      "data-umber": {
+        "role": "data",
+        "displayName": "Umber",
+        "canonical": "#7a4a2a",
+        "cssVar": null,
+        "tonalRamp": [
+          "#342419",
+          "#482f1e",
+          "#5c3a23",
+          "#6e4427",
+          "#7a4a2a",
+          "#a7876f",
+          "#c7b2a1",
+          "#e7ddd2"
+        ]
+      },
+      "data-ochre": {
+        "role": "data",
+        "displayName": "Light Ochre",
+        "canonical": "#e0b54a",
+        "cssVar": null,
+        "tonalRamp": [
+          "#534423",
+          "#7b652e",
+          "#a38539",
+          "#c8a243",
+          "#e0b54a",
+          "#e9cc84",
+          "#f0ddae",
+          "#f6edd7"
+        ]
+      }
+    },
+    "dataSeriesOrder": [
+      "crimson",
+      "gold",
+      "emerald",
+      "ink",
+      "smoke",
+      "data-umber"
+    ],
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero only; uppercase Big Shoulders, 3.4rem to 6rem."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page headers (2.6–3.25rem) and landing section titles (2.8–3.6rem)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card, plate, modal and empty-state titles; large totals."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading text and controls, kept to 44–60ch."
+      },
+      "label": {
+        "displayName": "Caption Caps",
+        "purpose": "Tracked condensed caps for labels, captions, nav and buttons; never a kicker above a heading."
+      },
+      "numeral": {
+        "displayName": "Tabular Numeral",
+        "purpose": "Every money value, date, count and percentage."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ink-lip",
+        "value": "0 1px 0 rgba(22,20,18,0.35)",
+        "purpose": "Primary button's pressed-paper edge."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 10px 24px -16px rgba(22,20,18,0.55)",
+        "purpose": "TripCard hover only."
+      },
+      {
+        "name": "toast",
+        "value": "0 8px 24px -12px rgba(22,20,18,0.45)",
+        "purpose": "Notifications."
+      },
+      {
+        "name": "dialog",
+        "value": "0 24px 60px -20px rgba(22,20,18,0.6)",
+        "purpose": "Modal panel over a 55% ink scrim."
+      },
+      {
+        "name": "focus-wash",
+        "value": "0 0 0 3px var(--color-gold-wash)",
+        "purpose": "Input focus halo; crimson-wash on error."
+      }
+    ],
+    "borders": [
+      {
+        "name": "hairline",
+        "value": "1px solid",
+        "purpose": "Rows and region titles (ink at 15–80%)."
+      },
+      {
+        "name": "frame",
+        "value": "1.5px solid var(--color-ink)",
+        "purpose": "Controls, cards, dialogs."
+      },
+      {
+        "name": "close",
+        "value": "3px solid var(--color-ink)",
+        "purpose": "Page-header closes, plate frames, chart totals."
+      },
+      {
+        "name": "empty",
+        "value": "1.5px dashed rgba(22,20,18,0.35)",
+        "purpose": "Empty states."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default for draws and growth."
+      },
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Fades."
+      },
+      {
+        "name": "ink-draw",
+        "value": "1.4s ease-out-expo",
+        "purpose": "Stroke reveal via pathLength=1 dash offset (budget spiral)."
+      },
+      {
+        "name": "grow-x",
+        "value": "0.9s ease-out-expo, staggered",
+        "purpose": "Bars grow from the left."
+      },
+      {
+        "name": "grow-y",
+        "value": "0.8s ease-out-expo, 60ms stagger",
+        "purpose": "Columns grow from the baseline."
+      },
+      {
+        "name": "seg-draw",
+        "value": "0.75s ease-out-expo",
+        "purpose": "One spiral segment re-draws when its bar is hovered or focused."
+      },
+      {
+        "name": "fade-up",
+        "value": "0.5s ease-out-quart, 6px rise",
+        "purpose": "Entrances, menus, dialogs."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all animation collapses to end state",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one crimson action per screen.",
+      "html": "<button class=\"ds-btn-primary\">Draft my plan</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; font-size: 0.95rem; border-radius: 3px; border: 0; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; cursor: pointer; background: var(--color-crimson, #b8232f); color: #fff; box-shadow: 0 1px 0 rgba(22,20,18,0.35); } .ds-btn-primary:hover { background: var(--color-crimson-deep, #961b25); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-crimson, #b8232f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Strong secondary action in solid ink.",
+      "html": "<button class=\"ds-btn-ink\">Save trip</button>",
+      "css": ".ds-btn-ink { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; font-size: 0.95rem; border-radius: 3px; border: 0; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; cursor: pointer; background: var(--color-ink, #161412); color: var(--color-board, #efe6d2); } .ds-btn-ink:hover { background: var(--color-ink-soft, #3d362d); } .ds-btn-ink:active { transform: translateY(1px); } .ds-btn-ink:focus-visible { outline: 2px solid var(--color-ink, #161412); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "1.5px ink frame that inverts on hover.",
+      "html": "<button class=\"ds-btn-outline\">Try again</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; font-size: 0.95rem; border-radius: 3px; border: 0; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; cursor: pointer; background: transparent; color: var(--color-ink, #161412); border: 1.5px solid var(--color-ink, #161412); } .ds-btn-outline:hover { background: var(--color-ink, #161412); color: var(--color-board, #efe6d2); } .ds-btn-outline:focus-visible { outline: 2px solid var(--color-ink, #161412); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Quiet action; ink tint on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Keep it</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; font-size: 0.95rem; border-radius: 3px; border: 0; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; cursor: pointer; background: transparent; color: var(--color-ink-soft, #3d362d); } .ds-btn-ghost:hover { color: var(--color-ink, #161412); background: rgba(22,20,18,0.06); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--color-ink, #161412); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Caps label over a field-paper input; gold-wash focus halo.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Where to</span><input class=\"ds-input\" placeholder=\"Lisbon, Portugal\" /></label>",
+      "css": ".ds-field { display: block; width: 280px; } .ds-field-label { display: block; margin-bottom: 6px; font-size: 0.78rem; color: var(--color-ink-soft, #3d362d); font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; } .ds-input { display: block; width: 100%; height: 44px; padding: 0 12px; font-size: 0.975rem; background: var(--color-field, #f7f2e7); color: var(--color-ink, #161412); border: 1.5px solid rgba(22,20,18,0.25); border-radius: 3px; caret-color: var(--color-crimson, #b8232f); transition: border-color 150ms ease-out, box-shadow 150ms ease-out; } .ds-input::placeholder { color: var(--color-placeholder, #6e6557); } .ds-input:hover { border-color: rgba(22,20,18,0.45); } .ds-input:focus { outline: none; border-color: var(--color-ink, #161412); box-shadow: 0 0 0 3px var(--color-gold-wash, #f4e2b8); }"
+    },
+    {
+      "name": "Status Mark",
+      "kind": "chip",
+      "refersTo": "status-upcoming",
+      "description": "A drawn mark plus its word: ring, gold square, emerald tick.",
+      "html": "<span class=\"ds-status\"><span class=\"ds-mark\"><svg viewBox=\"0 0 12 12\" width=\"12\" height=\"12\"><circle cx=\"6\" cy=\"6\" r=\"4.25\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"/></svg>Planning</span><span class=\"ds-mark\"><svg viewBox=\"0 0 12 12\" width=\"12\" height=\"12\"><rect x=\"1.5\" y=\"1.5\" width=\"9\" height=\"9\" fill=\"#d99a1e\" stroke=\"#161412\"/></svg>Upcoming</span><span class=\"ds-mark\"><svg viewBox=\"0 0 12 12\" width=\"12\" height=\"12\"><path d=\"M1.5 6.5 4.5 9.5 10.5 2.5\" fill=\"none\" stroke=\"#1f6a4a\" stroke-width=\"2.2\"/></svg>Completed</span></span>",
+      "css": ".ds-status { display: inline-flex; gap: 16px; } .ds-mark { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--color-ink, #161412); font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; }"
+    },
+    {
+      "name": "Trip Card",
+      "kind": "card",
+      "refersTo": "trip-card",
+      "description": "Square field-paper card in a 1.5px ink frame with a ruled figures footer.",
+      "html": "<article class=\"ds-trip\"><div class=\"ds-trip-cover\"></div><div class=\"ds-trip-body\"><span class=\"ds-trip-cap\">Upcoming · 7 days</span><h3 class=\"ds-trip-title\">Lisbon in spring</h3><p class=\"ds-trip-dest\">Lisbon, Portugal</p><div class=\"ds-trip-foot\"><div><span class=\"ds-trip-cap\">Dates</span><b>Apr 3 – 10</b></div><div style=\"text-align:right\"><span class=\"ds-trip-cap\">Budget</span><b>$2,400</b></div></div></div></article>",
+      "css": ".ds-trip { width: 300px; background: var(--color-field, #f7f2e7); border: 1.5px solid var(--color-ink, #161412); color: var(--color-ink, #161412); transition: transform 200ms ease-out, box-shadow 200ms ease-out; } .ds-trip:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -16px rgba(22,20,18,0.55); } .ds-trip-cover { aspect-ratio: 16/9; background: var(--color-board-deep, #e7dcc4); border-bottom: 1.5px solid var(--color-ink, #161412); } .ds-trip-body { padding: 12px 16px 16px; } .ds-trip-cap { display: block; font-size: 0.68rem; color: var(--color-muted, #5f5649); font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; } .ds-trip-title { margin: 8px 0 0; font-size: 1.7rem; line-height: 0.95; font-family: var(--font-display, 'Big Shoulders', sans-serif); text-transform: uppercase; font-weight: 800; letter-spacing: -0.005em; line-height: 0.92; } .ds-trip-dest { margin: 4px 0 16px; color: var(--color-ink-soft, #3d362d); } .ds-trip-foot { display: flex; justify-content: space-between; border-top: 1px solid rgba(22,20,18,0.2); padding-top: 12px; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "App Rail",
+      "kind": "nav",
+      "refersTo": "nav-rail",
+      "description": "Ink rail; the active item is a solid crimson block.",
+      "html": "<nav class=\"ds-rail\"><span class=\"ds-brand\"><i style=\"background:#b8232f\"></i><i style=\"background:#d99a1e\"></i><i style=\"background:#1f6a4a\"></i></span><a class=\"ds-rail-item is-active\" href=\"#\">Overview</a><a class=\"ds-rail-item\" href=\"#\">Trips</a><a class=\"ds-rail-item\" href=\"#\">Plan with AI</a></nav>",
+      "css": ".ds-rail { width: 248px; padding: 24px 12px; background: var(--color-ink, #161412); display: flex; flex-direction: column; gap: 4px; } .ds-brand { display: flex; height: 28px; margin: 0 8px 20px; } .ds-brand i { width: 10px; } .ds-rail-item { display: flex; align-items: center; height: 44px; padding: 0 12px; font-size: 0.92rem; color: rgba(239,230,210,0.8); text-decoration: none; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; transition: background-color 150ms, color 150ms; } .ds-rail-item:hover { background: rgba(239,230,210,0.07); color: var(--color-board, #efe6d2); } .ds-rail-item.is-active { background: var(--color-crimson, #b8232f); color: #fff; } .ds-rail-item:focus-visible { outline: 2px solid var(--color-crimson, #b8232f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Budget Bars",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature: wrapped bars in data-series order, each printing value and percent; pairs with the spiral.",
+      "html": "<div class=\"ds-bars\"><div class=\"ds-bars-head\"><span>Sample budget</span><b>$1,990</b></div><div class=\"ds-bar\"><div class=\"ds-bar-row\"><span>Lodging</span><span>$860 <em>43%</em></span></div><i style=\"width:100%;background:#b8232f\"></i></div><div class=\"ds-bar\"><div class=\"ds-bar-row\"><span>Food</span><span>$480 <em>24%</em></span></div><i style=\"width:56%;background:#d99a1e\"></i></div><div class=\"ds-bar\"><div class=\"ds-bar-row\"><span>Sights</span><span>$390 <em>20%</em></span></div><i style=\"width:45%;background:#1f6a4a\"></i></div></div>",
+      "css": ".ds-bars { width: 300px; color: var(--color-ink, #161412); } .ds-bars-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid var(--color-ink, #161412); padding-bottom: 8px; } .ds-bars-head span { font-size: 0.8rem; color: var(--color-ink-soft, #3d362d); font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; } .ds-bars-head b { font-size: 2.1rem; font-variant-numeric: tabular-nums; font-family: var(--font-display, 'Big Shoulders', sans-serif); text-transform: uppercase; font-weight: 800; letter-spacing: -0.005em; line-height: 0.92; } .ds-bar { padding: 8px 0; border-bottom: 1px solid rgba(22,20,18,0.15); } .ds-bar-row { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; font-weight: 600; } .ds-bar-row span:first-child { font-size: 0.78rem; font-family: var(--font-label, 'Sofia Sans Condensed', sans-serif); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; } .ds-bar-row em { font-style: normal; font-weight: 400; color: var(--color-muted, #5f5649); margin-left: 8px; } .ds-bar i { display: block; height: 10px; margin-top: 6px; transform-origin: left; animation: ds-grow 0.9s cubic-bezier(0.16,1,0.3,1) both; } .ds-bar:hover i { animation: ds-grow 0.9s cubic-bezier(0.16,1,0.3,1) both; } @keyframes ds-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } } @media (prefers-reduced-motion: reduce) { .ds-bar i { animation: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Data Portrait",
+    "overview": "VoyageAI is drawn in W. E. B. Du Bois' 1900 visual language: an aged board, ink structure, and three flat inks (crimson, gold, emerald) that carry meaning. A trip is an argument made in numbers, so money and time are drawn as purposeful hand-built charts (a budget spiral that unrolls into wrapped bars, columns with values printed on top, stepped squares) rather than summarised in tiles. Everything else stays standard and calm so the charts can speak.\n\nDisplay type is condensed capitals set tight and large; captions are tracked condensed capitals; reading text is a plain humanist sans. Regions are framed by ink rules, from a 1px hairline to a 3px bar, instead of floating cards. Black ink bands carry navigation on every surface: the public nav and footer, the app's side rail, and its mobile tab bar.\n\nThe redesign rejects the dark glassmorphism look it replaced: no gradients, no glass, no glow, no blurred panels. Colour is never the only signal. Every status, category and series is paired with a word, and sample content is labelled as sample.",
+    "keyCharacteristics": [
+      "Aged board ground, ink bands, flat crimson / gold / emerald fills",
+      "Condensed display capitals, tracked caption capitals, tabular figures for every number",
+      "Ink rules (1px, 1.5px, 3px) frame regions; corners are square or nearly so (2–3px)",
+      "Hand-built SVG charts as the signature: spiral + bars, columns, glyphs",
+      "Motion draws ink: strokes reveal, bars grow, exponential ease-out, frozen under reduced motion"
+    ],
+    "rules": [
+      {
+        "name": "The Crimson Acts Rule",
+        "body": "Crimson marks the primary action and the active place. On any screen it is the one filled button colour; secondary actions are ink, outline or ghost.",
+        "section": "colors"
+      },
+      {
+        "name": "The Word Beside the Ink Rule",
+        "body": "No colour stands alone. Status marks carry their name, category tags print the category, every bar prints its value and percentage.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Ink Rule",
+        "body": "Fills are solid inks. No gradients, no transparency washes layered for depth, no glow.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figure Rule",
+        "body": "Numbers are set in tabular figures so columns of money align; numbers are typed, never spun (no input steppers).",
+        "section": "typography"
+      },
+      {
+        "name": "The Caption Below Rule",
+        "body": "Tracked caps caption a figure, a field or a region; they never sit above a headline as a kicker or eyebrow.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rule, Not the Shadow Rule",
+        "body": "A region is separated by an ink rule. A shadow is reserved for overlays and hover lift; never use one to frame a resting panel.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** use crimson for the single primary action and the active nav item; use ink, outline or ghost for everything else.",
+      "**Do** pair every colour with a word: status marks with their name, category tags with the category, bars with value and percentage.",
+      "**Do** set every number in tabular figures and every large total in display caps.",
+      "**Do** frame regions with ink rules (1px hairline, 1.5px frame, 3px close) instead of cards with shadows.",
+      "**Do** draw money and time as charts (budget portrait, columns, glyphs) and print the values on the chart.",
+      "**Do** label sample or illustrative content as sample, on the chart and in its accessible name.",
+      "**Do** collapse every animation to its end state under prefers-reduced-motion."
+    ],
+    "donts": [
+      "**Don't** use gradients, glassmorphism, backdrop blur or glow; the dark glass look this replaced is retired.",
+      "**Don't** put a caps kicker or eyebrow above a headline; captions sit beside or beneath what they name.",
+      "**Don't** use a shadow to frame a resting panel; shadows belong to overlays and hover lift only.",
+      "**Don't** round cards, plates or panels; only controls take the 3px corner, and only avatars are circles.",
+      "**Don't** rely on colour alone for status, category or series.",
+      "**Don't** introduce new accent hues; extend series with the existing inks in their fixed order."
+    ]
+  }
+}

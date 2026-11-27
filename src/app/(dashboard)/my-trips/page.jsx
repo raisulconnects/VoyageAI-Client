@@ -1,96 +1,129 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState } from "react";
-import TripCard from "@/components/cards/TripCard";
-import { HiOutlinePlus, HiOutlineFilter } from "react-icons/hi";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { HiOutlinePlus, HiOutlineSparkles } from "react-icons/hi";
 import api from "@/lib/api";
+import TripCard from "@/components/cards/TripCard";
+import PageHeader from "@/components/ui/PageHeader";
+import TripsTabs from "@/components/layout/TripsTabs";
+import Button from "@/components/ui/Button";
+import { Select } from "@/components/ui/Field";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui/Feedback";
+
+const STATUSES = ["All", "Planning", "Upcoming", "Completed"];
+const SORTS = {
+  soonest: { label: "Start date, soonest first", fn: (a, b) => new Date(a.startDate) - new Date(b.startDate) },
+  latest: { label: "Start date, latest first", fn: (a, b) => new Date(b.startDate) - new Date(a.startDate) },
+  budget: { label: "Budget, highest first", fn: (a, b) => b.budget - a.budget },
+  added: { label: "Recently added", fn: (a, b) => new Date(b.createdAt) - new Date(a.createdAt) },
+};
 
 export default function MyTripsPage() {
   const [filter, setFilter] = useState("All");
+  const [sort, setSort] = useState("soonest");
 
-  const { data: trips = [], isLoading } = useQuery({
+  const { data: trips = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["trips"],
-    queryFn: async () => {
-      const res = await api.get("/trips");
-      return res.data.data;
-    }
+    queryFn: async () => (await api.get("/trips")).data.data,
   });
 
-  const filteredTrips = filter === "All" 
-    ? trips 
-    : trips.filter(trip => trip.status === filter);
+  const counts = useMemo(() => {
+    const c = { All: trips.length };
+    for (const t of trips) c[t.status] = (c[t.status] || 0) + 1;
+    return c;
+  }, [trips]);
+
+  const visible = useMemo(
+    () => (filter === "All" ? trips : trips.filter((t) => t.status === filter)).slice().sort(SORTS[sort].fn),
+    [trips, filter, sort]
+  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">My Trips</h1>
-          <p className="text-slate-400 mt-1">Manage and organize all your travel itineraries.</p>
-        </div>
-        <Link 
-          href="/add-destination"
-          className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20"
-        >
-          <HiOutlinePlus className="mr-2 h-5 w-5" />
-          New Trip
-        </Link>
-      </div>
+    <div>
+      <PageHeader
+        title="Trips"
+        description="Every trip you’ve planned, with its dates, status and budget."
+        actions={
+          <>
+            <Button href="/ai-planner">
+              <HiOutlineSparkles className="h-4 w-4" aria-hidden="true" /> Plan with AI
+            </Button>
+            <Button href="/add-destination" variant="outline">
+              <HiOutlinePlus className="h-4 w-4" aria-hidden="true" /> New trip
+            </Button>
+          </>
+        }
+      >
+        <TripsTabs />
+      </PageHeader>
 
-      {/* Filters */}
-      <div className="flex items-center justify-between bg-slate-900/50 p-2 rounded-xl border border-white/10">
-        <div className="flex overflow-x-auto hide-scrollbar gap-1">
-          {["All", "Upcoming", "Planning", "Completed"].map((status) => (
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div role="group" aria-label="Filter by status" className="flex gap-1 overflow-x-auto hide-scrollbar">
+          {STATUSES.map((s) => (
             <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                filter === status 
-                  ? "bg-white/10 text-white" 
-                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              key={s}
+              type="button"
+              aria-pressed={filter === s}
+              onClick={() => setFilter(s)}
+              className={`caps whitespace-nowrap px-3 py-2 text-[0.8rem] transition-colors ${
+                filter === s ? "bg-gold text-ink" : "text-ink-soft hover:bg-ink/[0.06] hover:text-ink"
               }`}
             >
-              {status}
+              {s} <span className="tabular ml-1 text-muted">{counts[s] || 0}</span>
             </button>
           ))}
         </div>
-        <button className="hidden sm:flex items-center px-3 py-2 text-slate-400 hover:text-white transition-colors">
-          <HiOutlineFilter className="mr-2 h-4 w-4" />
-          <span className="text-sm">Filter</span>
-        </button>
+        <Select label="Sort" value={sort} onChange={(e) => setSort(e.target.value)} className="sm:w-64">
+          {Object.entries(SORTS).map(([key, s]) => (
+            <option key={key} value={key}>
+              {s.label}
+            </option>
+          ))}
+        </Select>
       </div>
 
-      {/* Grid */}
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTrips.map((trip, idx) => (
-            <motion.div
-              key={trip._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: idx * 0.1 }}
-            >
-              <TripCard trip={trip} />
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {!isLoading && filteredTrips.length === 0 && (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">🌍</span>
+      <div className="mt-8">
+        {isError ? (
+          <ErrorState title="Your trips didn’t load" onRetry={refetch} />
+        ) : isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-80" />
+            ))}
           </div>
-          <h3 className="text-xl font-medium text-white mb-2">No trips found</h3>
-          <p className="text-slate-400">Try changing your filters or create a new trip.</p>
-        </div>
-      )}
+        ) : visible.length ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {visible.map((trip, i) => (
+              <TripCard key={trip._id} trip={trip} priority={i < 3} />
+            ))}
+          </div>
+        ) : trips.length ? (
+          <EmptyState
+            glyph="ring"
+            title={`No ${filter.toLowerCase()} trips`}
+            action={
+              <Button variant="outline" onClick={() => setFilter("All")}>
+                Show all trips
+              </Button>
+            }
+          >
+            Status updates from the dates: a trip becomes Upcoming once it starts and Completed when it ends.
+          </EmptyState>
+        ) : (
+          <EmptyState
+            glyph="steps"
+            title="No trips yet"
+            action={
+              <Button href="/ai-planner">
+                <HiOutlineSparkles className="h-4 w-4" aria-hidden="true" /> Plan your first trip
+              </Button>
+            }
+          >
+            Draft one with the AI planner, or add a trip you’ve already sorted out.
+          </EmptyState>
+        )}
+      </div>
     </div>
   );
 }

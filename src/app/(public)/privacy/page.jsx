@@ -1,7 +1,6 @@
-"use client";
+import LegalDocument from "@/components/content/LegalDocument";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
+export const metadata = { title: "Privacy policy" };
 
 const sections = [
   {
@@ -102,61 +101,12 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="py-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-16"
-      >
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">
-          Privacy <span className="text-gradient">Policy</span>
-        </h1>
-        <p className="text-slate-400">Last updated: July 20, 2026</p>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="glass-card p-8 md:p-12 space-y-10"
-      >
-        <p className="text-slate-300 leading-relaxed">
-          At VoyageAI, your privacy is fundamental to us. This Privacy Policy explains how we collect,
-          use, protect, and handle your personal information when you use our AI-powered travel
-          planning platform.
-        </p>
-
-        {sections.map((section, idx) => (
-          <div key={idx}>
-            <h2 className="text-xl font-bold text-white mb-4">{section.title}</h2>
-            <ul className="space-y-3">
-              {section.content.map((item, i) => (
-                <li key={i} className="text-slate-300 leading-relaxed pl-4 border-l border-white/10">
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="mt-12 text-center"
-      >
-        <p className="text-slate-400 mb-4">
-          Have questions about your privacy?
-        </p>
-        <Link
-          href="/contact"
-          className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]"
-        >
-          Contact Us
-        </Link>
-      </motion.div>
-    </div>
+    <LegalDocument
+      title="Privacy policy"
+      updated="July 20, 2026"
+      intro="At VoyageAI, your privacy is fundamental to us. This Privacy Policy explains how we collect, use, protect, and handle your personal information when you use our AI-powered travel planning platform."
+      sections={sections}
+      question="Questions about your privacy?"
+    />
   );
 }

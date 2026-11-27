@@ -1,176 +1,139 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { initials } from "@/lib/format";
+import BrandMark from "@/components/ui/BrandMark";
+import { buttonClasses } from "@/components/ui/Button";
+
+const LINKS = [
+  { name: "Explore", href: "/explore" },
+  { name: "Plan a trip", href: "/ai-planner" },
+  { name: "About", href: "/about" },
+];
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
 
-  const toggleMenu = () => setIsOpen(!isOpen);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
-
-  const navLinks = [
-    { name: "Explore", href: "/explore" },
-    { name: "About", href: "/about" },
-  ];
-
-  const initials = user?.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U";
+  const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav className="fixed w-full z-50 top-0 transition-all duration-300 glass">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <Link href="/" className="text-2xl font-bold text-white tracking-tighter">
-              Voyage<span className="text-gradient">AI</span>
-            </Link>
-          </div>
+    <header className="sticky top-0 z-50 bg-ink text-board">
+      <nav aria-label="Main" className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-5 sm:px-8">
+        <BrandMark tone="light" />
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
+        <ul className="hidden items-center gap-8 md:flex">
+          {LINKS.map((link) => (
+            <li key={link.href}>
               <Link
-                key={link.name}
                 href={link.href}
-                className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
+                aria-current={isActive(link.href) ? "page" : undefined}
+                className={`caps relative border-b-[3px] py-1.5 text-[0.98rem] transition-colors hover:text-board ${
+                  isActive(link.href) ? "border-crimson text-board" : "border-transparent text-board/80"
+                }`}
               >
                 {link.name}
               </Link>
-            ))}
-            <div className="flex items-center space-x-4 ml-4 border-l border-white/10 pl-6">
-              {user ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
-                  >
-                    Sign Out
-                  </button>
-                  <Link href="/profile" className="ml-2 block">
-                    {user.avatarUrl ? (
-                      <div className="relative h-9 w-9 rounded-full overflow-hidden border border-white/20 hover:border-white/50 transition-colors">
-                        <Image src={user.avatarUrl} alt="Avatar" fill className="object-cover" />
-                      </div>
-                    ) : (
-                      <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold border border-white/20 hover:border-white/50 transition-colors">
-                        {initials}
-                      </div>
-                    )}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="bg-blue-600/90 hover:bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(37,99,235,0.5)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]"
-                  >
-                    Get Started
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+            </li>
+          ))}
+        </ul>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={toggleMenu}
-              className="text-slate-300 hover:text-white focus:outline-none p-2"
-            >
-              {isOpen ? (
-                <HiOutlineX className="h-6 w-6" />
-              ) : (
-                <HiOutlineMenu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+        <div className="hidden items-center gap-3 md:flex">
+          {loading ? (
+            <span className="h-9 w-28" aria-hidden="true" />
+          ) : user ? (
+            <>
+              <Link href="/dashboard" className={buttonClasses({ variant: "outline-light", size: "sm" })}>
+                Open your trips
+              </Link>
+              <Link href="/profile" aria-label="Your profile" className="block">
+                <Avatar user={user} />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="caps px-2 text-[0.98rem] text-board/80 transition-colors hover:text-board">
+                Sign in
+              </Link>
+              <Link href="/register" className={buttonClasses({ variant: "primary", size: "sm" })}>
+                Start planning
+              </Link>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden glass border-t border-white/10"
-          >
-            <div className="px-4 pt-2 pb-6 space-y-1">
-              {navLinks.map((link) => (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          className="flex h-10 w-10 items-center justify-center text-board md:hidden"
+        >
+          {open ? <HiOutlineX className="h-6 w-6" aria-hidden="true" /> : <HiOutlineMenu className="h-6 w-6" aria-hidden="true" />}
+        </button>
+      </nav>
+
+      {open && (
+        <div id="mobile-menu" className="fade-up border-t border-board/15 md:hidden" onClick={(e) => e.target.closest("a") && setOpen(false)}>
+          <ul className="px-5 py-3">
+            {LINKS.map((link) => (
+              <li key={link.href}>
                 <Link
-                  key={link.name}
                   href={link.href}
-                  className="block px-3 py-3 text-base font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                  onClick={() => setIsOpen(false)}
+                  aria-current={isActive(link.href) ? "page" : undefined}
+                  className="display block border-b border-board/10 py-3 text-[1.6rem] text-board"
                 >
                   {link.name}
                 </Link>
-              ))}
-              <div className="pt-4 mt-2 border-t border-white/10 flex flex-col space-y-3 px-3">
-                {user ? (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      className="block w-full text-center py-3 text-base font-medium text-slate-300 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={() => { setIsOpen(false); handleLogout(); }}
-                      className="block w-full text-center py-3 text-base font-medium text-slate-300 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
-                    >
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="block w-full text-center py-3 text-base font-medium text-slate-300 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="block w-full text-center py-3 text-base font-medium text-white bg-blue-600 rounded-lg shadow-lg"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Get Started
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-3 px-5 pb-5">
+            {user ? (
+              <Link href="/dashboard" className={buttonClasses({ variant: "primary", className: "flex-1" })}>
+                Open your trips
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className={buttonClasses({ variant: "outline-light", className: "flex-1" })}>
+                  Sign in
+                </Link>
+                <Link href="/register" className={buttonClasses({ variant: "primary", className: "flex-1" })}>
+                  Start planning
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+export function Avatar({ user, size = 36, className = "" }) {
+  if (user?.avatarUrl) {
+    return (
+      <span
+        className={`relative block overflow-hidden rounded-full border-[1.5px] border-board/60 ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <Image src={user.avatarUrl} alt="" fill className="object-cover" sizes={`${size}px`} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`caps flex items-center justify-center rounded-full bg-gold text-ink ${className}`}
+      style={{ width: size, height: size, fontSize: size * 0.36, letterSpacing: "0.02em" }}
+    >
+      {initials(user?.name)}
+    </span>
   );
 }

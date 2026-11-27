@@ -1,59 +1,248 @@
 @import "tailwindcss";
 
+/*
+  VoyageAI design tokens — a Du Bois data-portrait world.
+  Aged board ground, ink structure, flat crimson / gold / emerald inks.
+*/
 @theme {
-  --color-background: #0f172a;
-  --color-foreground: #f8fafc;
-  --color-primary: #3b82f6;
-  --color-primary-foreground: #ffffff;
-  --color-muted: #1e293b;
-  --color-muted-foreground: #94a3b8;
-  --color-border: rgba(255, 255, 255, 0.1);
+  --color-board: #efe6d2;
+  --color-board-deep: #e7dcc4;
+  --color-field: #f7f2e7;
+  --color-ink: #161412;
+  --color-ink-soft: #3d362d;
+  --color-muted: #5f5649;
+  --color-placeholder: #6e6557;
+  --color-rule: #c9bb9e;
+  --color-smoke: #a69f92;
+
+  --color-crimson: #b8232f;
+  --color-crimson-deep: #961b25;
+  --color-crimson-wash: #f2d7d2;
+  --color-gold: #d99a1e;
+  --color-gold-wash: #f4e2b8;
+  --color-emerald: #1f6a4a;
+  --color-emerald-wash: #d4e3d6;
+
+  --font-sans: var(--font-sofia), ui-sans-serif, system-ui, sans-serif;
+  --font-label: var(--font-sofia-condensed), var(--font-sofia), ui-sans-serif, sans-serif;
+  --font-display: var(--font-shoulders), var(--font-sofia-condensed), ui-sans-serif, sans-serif;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    color-scheme: light;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-board);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern";
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-crimson);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  dd,
+  blockquote,
+  figcaption {
+    text-wrap: pretty;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: var(--color-crimson);
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Numbers are typed, not spun: drop the browser steppers. */
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-smoke) transparent;
+  }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-slate-900/40 backdrop-blur-md border border-white/10;
+  /* Tracked condensed capitals: captions, labels, nav. */
+  .caps {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 600;
   }
-  .glass-card {
-    @apply bg-slate-800/40 backdrop-blur-lg border border-white/10 shadow-xl rounded-2xl;
+
+  .display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: -0.005em;
+    line-height: 0.92;
   }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400;
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ink-link {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-crimson);
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ink-draw: strokes reveal with pathLength="1". */
+  .ink-draw {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+    animation: ink-draw 1.4s var(--ease-out-expo) forwards;
+  }
+
+  .grow-x {
+    transform-origin: left center;
+    animation: grow-x 0.9s var(--ease-out-expo) both;
+  }
+
+  .fade-up {
+    animation: fade-up 0.5s var(--ease-out-quart) both;
   }
 }
 
-* {
-  box-sizing: border-box;
+@keyframes ink-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
-body {
-  min-height: 100vh;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  /* Subtly dark gradient background */
-  background-image: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
-  background-attachment: fixed;
+/* A spiral segment re-drawing its own length (--seg, in pathLength units). */
+.seg-draw {
+  stroke-dasharray: var(--seg) 2;
+  animation: seg-draw 0.75s var(--ease-out-expo) both;
 }
 
-button {
-  cursor: pointer;
+@keyframes seg-draw {
+  from {
+    stroke-dasharray: 0 2;
+  }
+  to {
+    stroke-dasharray: var(--seg) 2;
+  }
 }
 
-img {
-  display: block;
-  max-width: 100%;
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
-input,
-textarea,
-select {
-  outline: none;
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-a {
-  text-decoration: none;
+@keyframes typing {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .ink-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .grow-x,
+  .fade-up {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

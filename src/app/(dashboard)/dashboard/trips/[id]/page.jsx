@@ -1,253 +1,184 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineCurrencyDollar, HiOutlinePencilAlt, HiOutlineArrowLeft } from "react-icons/hi";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { HiArrowLeft, HiOutlinePencil } from "react-icons/hi";
 import api from "@/lib/api";
-
-const STATUS_STYLES = {
-  Upcoming: "bg-blue-600/90 text-white",
-  Completed: "bg-emerald-600/90 text-white",
-  Planning: "bg-slate-600/90 text-white",
-};
+import { formatDate, formatMoney, tripLength, daysUntil, sum } from "@/lib/format";
+import Button, { buttonClasses } from "@/components/ui/Button";
+import StatusMark from "@/components/ui/StatusMark";
+import { Region } from "@/components/ui/PageHeader";
+import BudgetPortrait from "@/components/charts/BudgetPortrait";
+import ColumnChart from "@/components/charts/ColumnChart";
+import { EmptyState, PageLoader } from "@/components/ui/Feedback";
 
 export default function TripDetailPage() {
-  const params = useParams();
+  const { id } = useParams();
 
-  const { data: trip, isLoading } = useQuery({
-    queryKey: ["trip", params.id],
-    queryFn: async () => {
-      const res = await api.get(`/trips/${params.id}`);
-      return res.data.data;
-    },
+  const { data: trip, isLoading, isError } = useQuery({
+    queryKey: ["trip", id],
+    queryFn: async () => (await api.get(`/trips/${id}`)).data.data,
+    retry: false,
   });
 
-  if (isLoading) {
+  if (isLoading) return <PageLoader label="Loading trip" />;
+
+  if (isError || !trip) {
     return (
-      <div className="py-20 flex justify-center h-screen items-center">
-        <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-      </div>
+      <EmptyState
+        glyph="ring"
+        title="Trip not found"
+        action={
+          <Link href="/my-trips" className={buttonClasses({ variant: "outline" })}>
+            Back to trips
+          </Link>
+        }
+      >
+        It may have been deleted, or the link is incomplete.
+      </EmptyState>
     );
   }
 
-  if (!trip) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center h-screen">
-        <h2 className="text-2xl text-white mb-4">Trip not found</h2>
-        <Link href="/my-trips" className="text-blue-400 hover:text-blue-300">
-          ← Back to My Trips
-        </Link>
-      </div>
-    );
-  }
+  const days = tripLength(trip.startDate, trip.endDate);
+  const until = daysUntil(trip.startDate);
+  const spent = sum(trip.expenses, "amount");
+  const perDay = days ? Math.round(trip.budget / days) : null;
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  const facts = [
+    { label: "Starts", value: formatDate(trip.startDate) },
+    { label: "Ends", value: formatDate(trip.endDate) },
+    { label: "Length", value: days ? `${days} ${days === 1 ? "day" : "days"}` : "—" },
+    { label: "Budget", value: formatMoney(trip.budget), sub: perDay ? `${formatMoney(perDay)} a day` : null },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/my-trips"
-          className="flex items-center text-slate-400 hover:text-white transition-colors"
-        >
-          <HiOutlineArrowLeft className="h-5 w-5 mr-2" />
-          Back to My Trips
-        </Link>
-        <Link
-          href={`/dashboard/trips/${params.id}/edit`}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors"
-        >
-          <HiOutlinePencilAlt className="mr-2 h-4 w-4" />
-          Edit Trip
-        </Link>
-      </div>
+    <article>
+      <Link href="/my-trips" className="caps inline-flex items-center gap-2 text-[0.82rem] text-ink-soft hover:text-ink">
+        <HiArrowLeft aria-hidden="true" /> Trips
+      </Link>
 
-      {/* Cover Image */}
-      {trip.coverImage && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative h-64 md:h-80 rounded-2xl overflow-hidden"
-        >
-          <Image
-            src={trip.coverImage}
-            alt={trip.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 80vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        </motion.div>
-      )}
-
-      {/* Title & Status */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-white">{trip.title}</h1>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[trip.status] || STATUS_STYLES.Planning}`}>
-            {trip.status}
-          </span>
+      <header className="mt-4 grid gap-6 border-b-[3px] border-ink pb-6 lg:grid-cols-[1fr_320px] lg:items-end">
+        <div className="min-w-0">
+          <h1 className="display text-[2.8rem] sm:text-[4.2rem]">{trip.title}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[1.15rem] text-ink-soft">
+            <span>{trip.destination}</span>
+            <StatusMark status={trip.status} />
+            {until > 0 && <span className="caps text-[0.78rem] text-crimson">Starts in {until} days</span>}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button href={`/dashboard/trips/${id}/edit`} variant="ink">
+              <HiOutlinePencil className="h-4 w-4" aria-hidden="true" /> Edit trip
+            </Button>
+            <Button href="/manage-destinations" variant="outline">
+              Manage trips
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center text-slate-400">
-          <HiOutlineLocationMarker className="h-5 w-5 mr-1.5" />
-          {trip.destination}
-        </div>
-      </motion.div>
+        {trip.coverImage && (
+          <div className="relative aspect-[4/3] overflow-hidden border-[3px] border-ink">
+            <Image src={trip.coverImage} alt="" fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 320px" />
+          </div>
+        )}
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Dates & Budget */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-          >
-            <div className="glass-card p-4 flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <HiOutlineCalendar className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Start Date</p>
-                <p className="text-sm font-medium text-white">{formatDate(trip.startDate)}</p>
-              </div>
-            </div>
-            <div className="glass-card p-4 flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <HiOutlineCalendar className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">End Date</p>
-                <p className="text-sm font-medium text-white">{formatDate(trip.endDate)}</p>
-              </div>
-            </div>
-            <div className="glass-card p-4 flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <HiOutlineCurrencyDollar className="h-5 w-5 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Budget</p>
-                <p className="text-sm font-medium text-white">${trip.budget}</p>
-              </div>
-            </div>
-          </motion.div>
+      <dl className="grid grid-cols-2 gap-px border-b border-ink/25 bg-ink/20 md:grid-cols-4">
+        {facts.map((f) => (
+          <div key={f.label} className="bg-board py-4 pl-1 pr-4 md:pl-5 md:first:pl-1">
+            <dt className="caps text-[0.72rem] text-muted">{f.label}</dt>
+            <dd className="tabular mt-1 text-[1.2rem] font-semibold">{f.value}</dd>
+            {f.sub && <dd className="text-sm text-muted">{f.sub}</dd>}
+          </div>
+        ))}
+      </dl>
 
-          {/* Notes */}
+      <div className="mt-10 grid gap-12 xl:grid-cols-[1fr_380px]">
+        <div className="min-w-0 space-y-12">
+          <Region title="Day by day" id="itinerary-title">
+            {trip.itinerary?.length ? (
+              <ol>
+                {trip.itinerary.map((day) => (
+                  <li key={day.day} className="grid grid-cols-[56px_1fr] gap-4 border-b border-ink/15 py-5 sm:grid-cols-[72px_1fr]">
+                    <span className="display tabular text-[2.6rem] leading-none text-crimson sm:text-[3.2rem]">{day.day}</span>
+                    <div className="min-w-0">
+                      <h3 className="text-[1.15rem] font-semibold leading-snug">{day.title}</h3>
+                      {day.activities?.length > 0 && (
+                        <ul className="mt-2 space-y-1.5 text-ink-soft">
+                          {day.activities.map((act, i) => (
+                            <li key={i} className="flex gap-3">
+                              <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 bg-ink" />
+                              <span>{act}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <EmptyState
+                glyph="steps"
+                title="No day plan yet"
+                action={
+                  <Button href={`/ai-planner?${new URLSearchParams({ destination: trip.destination, duration: String(Math.min(days || 3, 30)), budget: String(trip.budget) })}`}>
+                    Draft one with AI
+                  </Button>
+                }
+              >
+                Let the planner draft the days from this trip’s destination, length and budget.
+              </EmptyState>
+            )}
+          </Region>
+
           {trip.notes && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="glass-card p-6"
-            >
-              <h2 className="text-lg font-bold text-white mb-3">Notes</h2>
-              <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{trip.notes}</p>
-            </motion.div>
-          )}
-
-          {/* Itinerary */}
-          {trip.itinerary && trip.itinerary.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              className="glass-card p-6"
-            >
-              <h2 className="text-lg font-bold text-white mb-4">Itinerary</h2>
-              <div className="space-y-4">
-                {trip.itinerary.map((day, idx) => (
-                  <div key={idx} className="border-l-2 border-blue-500/30 pl-4">
-                    <h3 className="text-sm font-bold text-blue-400 mb-1">
-                      Day {day.day} — {day.title}
-                    </h3>
-                    {day.activities && day.activities.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {day.activities.map((act, i) => (
-                          <li key={i} className="text-sm text-slate-300 flex items-start">
-                            <span className="text-slate-500 mr-2">•</span>
-                            {act}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            <Region title="Notes" id="notes-title">
+              <p className="max-w-[68ch] whitespace-pre-wrap leading-relaxed text-ink-soft">{trip.notes}</p>
+            </Region>
           )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Budget Breakdown */}
-          {trip.budgetBreakdown && trip.budgetBreakdown.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="glass-card p-6"
-            >
-              <h2 className="text-lg font-bold text-white mb-4">Budget Breakdown</h2>
-              <div className="space-y-3">
-                {trip.budgetBreakdown.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-sm text-slate-300">{item.name}</span>
-                    <span className="text-sm font-medium text-white">${item.value}</span>
-                  </div>
-                ))}
-                <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-sm font-medium text-white">Total</span>
-                  <span className="text-sm font-bold text-white">
-                    ${trip.budgetBreakdown.reduce((sum, item) => sum + item.value, 0)}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
+        <aside className="space-y-12">
+          <Region title="Budget" id="budget-title">
+            {trip.budgetBreakdown?.length ? (
+              <BudgetPortrait items={trip.budgetBreakdown} size={200} caption="Itemised" compact />
+            ) : (
+              <p className="text-ink-soft">
+                <span className="display tabular block text-[2.4rem] text-ink">{formatMoney(trip.budget)}</span>
+                No category breakdown for this trip.
+              </p>
+            )}
+          </Region>
 
-          {/* Expenses */}
-          {trip.expenses && trip.expenses.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.45 }}
-              className="glass-card p-6"
-            >
-              <h2 className="text-lg font-bold text-white mb-4">Expenses</h2>
-              <div className="space-y-3">
-                {trip.expenses.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-sm text-slate-300">{item.day}</span>
-                    <span className="text-sm font-medium text-white">${item.amount}</span>
-                  </div>
-                ))}
-                <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-sm font-medium text-white">Total</span>
-                  <span className="text-sm font-bold text-white">
-                    ${trip.expenses.reduce((sum, item) => sum + item.amount, 0)}
-                  </span>
-                </div>
+          {trip.expenses?.length > 0 && (
+            <Region title="Spent by day" id="spent-title">
+              <ColumnChart
+                label="Spending by day"
+                data={trip.expenses.map((e) => ({ label: e.day, value: e.amount }))}
+                height={170}
+              />
+              <div className="mt-4 flex items-baseline justify-between border-t-[3px] border-ink pt-2">
+                <span className="caps text-[0.78rem]">Spent</span>
+                <span className="tabular font-semibold">
+                  {formatMoney(spent)} <span className="font-normal text-muted">of {formatMoney(trip.budget)}</span>
+                </span>
               </div>
-            </motion.div>
+              <div aria-hidden="true" className="mt-2 h-2.5 bg-ink/10">
+                <span
+                  className={`block h-full ${spent > trip.budget ? "bg-crimson" : "bg-emerald"}`}
+                  style={{ width: `${Math.min((spent / (trip.budget || 1)) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                {spent > trip.budget
+                  ? `${formatMoney(spent - trip.budget)} over budget.`
+                  : `${formatMoney(trip.budget - spent)} left.`}
+              </p>
+            </Region>
           )}
-        </div>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 }
