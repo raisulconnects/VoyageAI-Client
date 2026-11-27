@@ -1,164 +1,204 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineEye } from "react-icons/hi";
-import Link from "next/link";
-import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { HiOutlinePencil, HiOutlineSearch, HiOutlineTrash, HiOutlinePlus } from "react-icons/hi";
+import api from "@/lib/api";
+import { formatDate, formatDateRange, formatMoney } from "@/lib/format";
+import PageHeader from "@/components/ui/PageHeader";
+import TripsTabs from "@/components/layout/TripsTabs";
+import Button from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import StatusMark from "@/components/ui/StatusMark";
+import { ConfirmDialog } from "@/components/ui/Modal";
+import { EmptyState, ErrorState, Glyph, Skeleton } from "@/components/ui/Feedback";
 
-export default function ManageDestinationsPage() {
+export default function ManageTripsPage() {
   const [search, setSearch] = useState("");
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: trips = [], isLoading, refetch } = useQuery({
-    queryKey: ["manageTrips"],
-    queryFn: async () => {
-      const res = await api.get("/trips");
-      return res.data.data;
-    }
+  const { data: trips = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["trips"],
+    queryFn: async () => (await api.get("/trips")).data.data,
   });
 
-  const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this trip?")) {
-      try {
-        await api.delete(`/trips/${id}`);
-        toast.success("Trip deleted successfully");
-        refetch();
-      } catch (err) {
-        toast.error("Failed to delete trip");
-      }
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/trips/${toDelete._id}`);
+      toast.success(`Deleted “${toDelete.title}”.`);
+      setToDelete(null);
+      ["trips", "savedTrips", "dashboardStats", "manageTrips"].forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] })
+      );
+    } catch (err) {
+      toast.error(err.message || "Couldn’t delete the trip. Try again.");
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const filteredTrips = trips.filter(t => 
-    t.title.toLowerCase().includes(search.toLowerCase()) || 
-    t.destination.toLowerCase().includes(search.toLowerCase())
-  );
+  const q = search.trim().toLowerCase();
+  const filtered = trips.filter((t) => t.title.toLowerCase().includes(q) || t.destination.toLowerCase().includes(q));
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Manage Destinations</h1>
-          <p className="text-slate-400 mt-1">View, edit, or remove your planned destinations.</p>
-        </div>
-        <Link 
-          href="/add-destination"
-          className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20"
-        >
-          Add New
-        </Link>
+    <div>
+      <PageHeader
+        title="Trips"
+        description="Find a trip fast, then open, edit or delete it."
+        actions={
+          <Button href="/add-destination" variant="outline">
+            <HiOutlinePlus className="h-4 w-4" aria-hidden="true" /> New trip
+          </Button>
+        }
+      >
+        <TripsTabs />
+      </PageHeader>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <Input
+          label="Search trips"
+          icon={HiOutlineSearch}
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Title or destination"
+          className="sm:max-w-sm"
+        />
+        <p className="caps text-[0.78rem] text-muted" aria-live="polite">
+          {isLoading ? "Loading" : `${filtered.length} of ${trips.length} ${trips.length === 1 ? "trip" : "trips"}`}
+        </p>
       </div>
 
-      <div className="glass-card overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-slate-900/50">
-          <div className="relative w-full max-w-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <HiOutlineSearch className="h-4 w-4 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="block w-full pl-9 pr-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-              placeholder="Search destinations..."
-            />
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="text-xs uppercase bg-slate-800/50 text-slate-400 border-b border-white/10">
-              <tr>
-                <th scope="col" className="px-6 py-4 font-medium">Destination</th>
-                <th scope="col" className="px-6 py-4 font-medium">Status</th>
-                <th scope="col" className="px-6 py-4 font-medium">Date Added</th>
-                <th scope="col" className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {isLoading ? (
-                <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-slate-400">
-                    Loading trips...
-                  </td>
-                </tr>
-              ) : filteredTrips.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-slate-400">
-                    No trips found.
-                  </td>
-                </tr>
+      <div className="mt-6">
+        {isError ? (
+          <ErrorState title="Your trips didn’t load" onRetry={refetch} />
+        ) : isLoading ? (
+          <Skeleton className="h-72 w-full" />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            glyph="ring"
+            title={trips.length ? "No trip matches" : "No trips yet"}
+            action={
+              trips.length ? (
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  Clear search
+                </Button>
               ) : (
-                filteredTrips.map((dest, idx) => (
-                  <motion.tr 
-                    key={dest._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: idx * 0.1 }}
-                    className="hover:bg-white/5 transition-colors group"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 bg-slate-800 flex items-center justify-center">
-                          {dest.coverImage ? (
-                            <Image
-                              src={dest.coverImage}
-                              alt={dest.title}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <span className="text-xl">🌍</span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">{dest.title}</div>
-                          <div className="text-xs text-slate-500">{dest.destination}</div>
+                <Button href="/ai-planner">Plan your first trip</Button>
+              )
+            }
+          >
+            {trips.length ? `Nothing matches “${search}”.` : "Trips you plan or add appear here."}
+          </EmptyState>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <table className="hidden w-full border-[1.5px] border-ink bg-field text-left md:table">
+              <caption className="sr-only">Your trips</caption>
+              <thead className="border-b-[1.5px] border-ink">
+                <tr className="caps text-[0.72rem] text-muted">
+                  <th scope="col" className="px-4 py-3 font-semibold">Trip</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Dates</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Budget</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Added</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((t) => (
+                  <tr key={t._id} className="border-b border-ink/15 last:border-0 hover:bg-board/60">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Thumb trip={t} />
+                        <div className="min-w-0">
+                          <Link href={`/dashboard/trips/${t._id}`} className="font-semibold hover:text-crimson">
+                            {t.title}
+                          </Link>
+                          <p className="truncate text-sm text-muted">{t.destination}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        dest.status === 'Upcoming' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                        dest.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                        'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                      }`}>
-                        {dest.status || 'Planning'}
-                      </span>
+                    <td className="px-4 py-3">
+                      <StatusMark status={t.status} />
                     </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      {new Date(dest.createdAt).toLocaleDateString()}
+                    <td className="tabular px-4 py-3 text-[0.92rem]">{formatDateRange(t.startDate, t.endDate)}</td>
+                    <td className="tabular px-4 py-3 text-right font-semibold">{formatMoney(t.budget)}</td>
+                    <td className="tabular px-4 py-3 text-[0.92rem] text-muted">{formatDate(t.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <RowActions trip={t} onDelete={() => setToDelete(t)} />
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-3">
-                        <Link href={`/dashboard/trips/${dest._id}`} className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors" title="View Details">
-                          <HiOutlineEye className="h-4 w-4" />
-                        </Link>
-                        <Link href={`/dashboard/trips/${dest._id}/edit`} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors" title="Edit">
-                          <HiOutlinePencilAlt className="h-4 w-4" />
-                        </Link>
-                        <button onClick={() => handleDelete(dest._id)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors" title="Delete">
-                          <HiOutlineTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Footer */}
-        <div className="p-4 border-t border-white/10 bg-slate-900/50 text-sm text-slate-400">
-          <div>Showing {filteredTrips.length} {filteredTrips.length === 1 ? 'entry' : 'entries'}</div>
-        </div>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Mobile list */}
+            <ul className="border-[1.5px] border-ink bg-field md:hidden">
+              {filtered.map((t) => (
+                <li key={t._id} className="flex items-start gap-3 border-b border-ink/15 p-3 last:border-0">
+                  <Thumb trip={t} />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/dashboard/trips/${t._id}`} className="block font-semibold">
+                      {t.title}
+                    </Link>
+                    <p className="truncate text-sm text-muted">{t.destination}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <StatusMark status={t.status} />
+                      <span className="tabular">{formatMoney(t.budget)}</span>
+                    </div>
+                  </div>
+                  <RowActions trip={t} onDelete={() => setToDelete(t)} />
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(toDelete)}
+        onClose={() => !deleting && setToDelete(null)}
+        onConfirm={confirmDelete}
+        busy={deleting}
+        title="Delete this trip?"
+        description={toDelete ? `“${toDelete.title}” and its itinerary, notes and expenses will be removed. This can’t be undone.` : ""}
+        confirmLabel="Delete trip"
+      />
+    </div>
+  );
+}
+
+function Thumb({ trip }) {
+  return (
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border-[1.5px] border-ink bg-board-deep">
+      {trip.coverImage ? (
+        <Image src={trip.coverImage} alt="" fill className="object-cover" sizes="48px" />
+      ) : (
+        <Glyph kind="steps" size={26} />
+      )}
+    </span>
+  );
+}
+
+function RowActions({ trip, onDelete }) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Button href={`/dashboard/trips/${trip._id}/edit`} variant="ghost" size="icon-sm" aria-label={`Edit ${trip.title}`}>
+        <HiOutlinePencil className="h-4 w-4" aria-hidden="true" />
+      </Button>
+      <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label={`Delete ${trip.title}`} className="hover:text-crimson">
+        <HiOutlineTrash className="h-4 w-4" aria-hidden="true" />
+      </Button>
     </div>
   );
 }

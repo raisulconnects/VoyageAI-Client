@@ -1,170 +1,128 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { HiOutlineLocationMarker, HiOutlineStar, HiOutlineClock, HiOutlineCurrencyDollar } from "react-icons/hi";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import api from "@/lib/api";
+import { categoryMeta } from "@/lib/categories";
+import { useAuth } from "@/context/AuthContext";
+import { buttonClasses } from "@/components/ui/Button";
+import { EmptyState, PageLoader } from "@/components/ui/Feedback";
 
 export default function DestinationDetailsPage() {
-  const params = useParams();
-  
-  const { data: dest, isLoading } = useQuery({
-    queryKey: ["destination", params.id],
-    queryFn: async () => {
-      const res = await api.get(`/destinations/${params.id}`);
-      return res.data.data;
-    }
+  const { id } = useParams();
+  const { user } = useAuth();
+
+  const { data: dest, isLoading, isError } = useQuery({
+    queryKey: ["destination", id],
+    queryFn: async () => (await api.get(`/destinations/${id}`)).data.data,
+    retry: false,
   });
 
-  if (isLoading) {
+  if (isLoading) return <PageLoader label="Loading destination" />;
+
+  if (isError || !dest) {
     return (
-      <div className="py-20 flex justify-center h-screen items-center">
-        <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+      <div className="mx-auto max-w-3xl px-5 py-20">
+        <EmptyState
+          glyph="ring"
+          title="We couldn’t find that place"
+          action={
+            <Link href="/explore" className={buttonClasses({ variant: "outline" })}>
+              Back to destinations
+            </Link>
+          }
+        >
+          It may have been removed, or the link is incomplete.
+        </EmptyState>
       </div>
     );
   }
 
-  if (!dest) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center h-screen">
-        <h2 className="text-2xl text-white mb-4">Destination Not Found</h2>
-        <Link href="/explore" className="text-blue-400 hover:text-blue-300">
-          ← Back to Explore
-        </Link>
-      </div>
-    );
-  }
+  const meta = categoryMeta(dest.category);
+  const planHref = `/ai-planner?${new URLSearchParams({ destination: dest.name }).toString()}`;
+  const planLink = user ? planHref : `/register?next=${encodeURIComponent(planHref)}`;
 
   return (
-    <div className="py-20">
-      {/* Hero Header */}
-      <div className="relative h-[60vh] w-full mt-[-80px]">
-        <div className="absolute inset-0 bg-slate-900">
-          <Image
-            src={dest.image || "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e"}
-            alt={dest.name}
-            fill
-            className="object-cover opacity-60"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/60 to-transparent" />
-        </div>
-        
-        <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <span className="px-4 py-1.5 rounded-full bg-blue-600/90 text-white text-sm font-bold backdrop-blur-md mb-6 inline-block">
-              {dest.category}
-            </span>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4">
-              {dest.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-6 text-slate-200">
-              <div className="flex items-center">
-                <HiOutlineStar className="h-5 w-5 text-yellow-400 mr-1.5" />
-                <span className="font-semibold">{dest.rating}</span>
-                <span className="text-slate-400 ml-1">({dest.reviews} reviews)</span>
-              </div>
-              <div className="flex items-center">
-                <HiOutlineLocationMarker className="h-5 w-5 mr-1.5" />
-                <span>{dest.country || "Worldwide"}</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+    <article className="mx-auto max-w-[1280px] px-5 pt-8 sm:px-8">
+      <Link href="/explore" className="caps inline-flex items-center gap-2 text-[0.82rem] text-ink-soft hover:text-ink">
+        <HiArrowLeft aria-hidden="true" /> All destinations
+      </Link>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          
-          {/* Main Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-2 space-y-12"
-          >
-            <section>
-              <h2 className="text-2xl font-bold text-white mb-4">About this destination</h2>
-              <div className="prose prose-invert max-w-none text-slate-300">
-                <p className="text-lg leading-relaxed mb-4">{dest.description}</p>
-                {dest.longDescription && (
-                  <p className="leading-relaxed">{dest.longDescription}</p>
-                )}
-              </div>
+      <header className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-end">
+        <div>
+          <h1 className="display text-[3.6rem] sm:text-[5.4rem]">{dest.name}</h1>
+          <p className="caps mt-3 flex items-center gap-2 text-[0.82rem]">
+            <span aria-hidden="true" className="h-3 w-3" style={{ background: meta.color }} />
+            {dest.category} · {dest.country}
+          </p>
+          <p className="mt-4 max-w-[52ch] text-[1.15rem] leading-relaxed text-ink-soft">{dest.description}</p>
+        </div>
+        <div className="relative aspect-[4/3] overflow-hidden border-[3px] border-ink bg-board-deep">
+          {dest.image && (
+            <Image src={dest.image} alt={dest.name} fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 55vw" />
+          )}
+        </div>
+      </header>
+
+      <div className="mt-14 grid gap-12 lg:grid-cols-[1fr_360px]">
+        <div className="min-w-0 space-y-12">
+          {dest.longDescription && (
+            <section aria-labelledby="about-title">
+              <h2 id="about-title" className="caps border-b border-ink pb-2 text-[0.95rem]">
+                About the place
+              </h2>
+              <p className="mt-4 max-w-[68ch] text-[1.05rem] leading-relaxed text-ink-soft">{dest.longDescription}</p>
             </section>
+          )}
 
-            {dest.highlights && dest.highlights.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold text-white mb-6">Top Highlights</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {dest.highlights.map((item, idx) => (
-                    <div key={idx} className="glass-card p-4 flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
-                        <span className="text-blue-400 font-bold">{idx + 1}</span>
-                      </div>
-                      <span className="text-slate-200 font-medium">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </motion.div>
-
-          {/* Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="lg:col-span-1"
-          >
-            <div className="glass-card p-6 md:p-8 sticky top-24">
-              <h3 className="text-xl font-bold text-white mb-6">Quick Info</h3>
-              
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 text-purple-400">
-                    <HiOutlineClock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Best Time To Visit</p>
-                    <p className="font-medium text-slate-200 mt-1">{dest.bestTimeToVisit || "Year-round"}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400">
-                    <HiOutlineCurrencyDollar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400">Estimated Daily Budget</p>
-                    <p className="font-medium text-slate-200 mt-1">{dest.estimatedDailyBudget || "Varies"}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-8 border-t border-white/10">
-                <Link
-                  href="/add-destination"
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] flex items-center justify-center"
-                >
-                  Plan Trip Here
-                </Link>
-                <button className="w-full mt-4 glass hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-all">
-                  Save to Wishlist
-                </button>
-              </div>
-            </div>
-          </motion.div>
-
+          {dest.highlights?.length > 0 && (
+            <section aria-labelledby="hl-title">
+              <h2 id="hl-title" className="caps border-b border-ink pb-2 text-[0.95rem]">
+                Worth the trip
+              </h2>
+              <ol className="mt-2">
+                {dest.highlights.map((item, idx) => (
+                  <li key={item} className="flex items-baseline gap-5 border-b border-ink/15 py-4">
+                    <span className="display tabular w-8 shrink-0 text-[1.9rem] text-crimson">{idx + 1}</span>
+                    <span className="text-[1.1rem]">{item}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </div>
+
+        <aside aria-label="Trip facts" className="lg:sticky lg:top-24 lg:self-start">
+          <dl className="border-[3px] border-ink bg-field">
+            <div className="border-b border-ink/20 p-5">
+              <dt className="caps text-[0.75rem] text-muted">Rating</dt>
+              <dd className="mt-1 flex items-end justify-between gap-4">
+                <span className="display tabular text-[2.4rem]">{dest.rating?.toFixed(1)}</span>
+                <span className="text-sm text-muted">{dest.reviews?.toLocaleString("en-US")} reviews</span>
+              </dd>
+              <dd aria-hidden="true" className="mt-2 h-2 bg-ink/10">
+                <span className="block h-full bg-crimson" style={{ width: `${((dest.rating || 0) / 5) * 100}%` }} />
+              </dd>
+            </div>
+            <div className="border-b border-ink/20 p-5">
+              <dt className="caps text-[0.75rem] text-muted">Best time to visit</dt>
+              <dd className="mt-1 text-[1.1rem] font-semibold">{dest.bestTimeToVisit || "Year-round"}</dd>
+            </div>
+            <div className="p-5">
+              <dt className="caps text-[0.75rem] text-muted">Daily budget</dt>
+              <dd className="mt-1 text-[1.1rem] font-semibold">{dest.estimatedDailyBudget || "Varies"}</dd>
+            </div>
+          </dl>
+          <Link href={planLink} className={buttonClasses({ size: "lg", className: "mt-4 w-full justify-between" })}>
+            Plan a trip to {dest.name.split(",")[0]}
+            <HiArrowRight aria-hidden="true" className="h-5 w-5" />
+          </Link>
+          <p className="mt-2 text-sm text-muted">Opens the AI planner with this destination filled in.</p>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 }

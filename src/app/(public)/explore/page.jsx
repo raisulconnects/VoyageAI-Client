@@ -1,160 +1,154 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { HiOutlineSearch, HiOutlineFilter } from "react-icons/hi";
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { HiOutlineSearch, HiOutlineX } from "react-icons/hi";
 import api from "@/lib/api";
+import { CATEGORIES } from "@/lib/categories";
+import DestinationPlate from "@/components/destinations/DestinationPlate";
+import { EmptyState, ErrorState, Glyph, Skeleton } from "@/components/ui/Feedback";
+import Button from "@/components/ui/Button";
 
-const CATEGORIES = ["All", "Cultural", "Nature", "Romantic", "Urban", "Tropical", "Historical"];
+function ExploreView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const category = params.get("category") || "All";
+  const [searchInput, setSearchInput] = useState(params.get("q") || "");
+  const [search, setSearch] = useState(searchInput);
 
-export default function ExplorePage() {
-  const [category, setCategory] = useState("All");
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
-  // Simple debounce for search
-  const handleSearchChange = (e) => {
-    setSearchInput(e.target.value);
-    setTimeout(() => {
-      setDebouncedSearch(e.target.value);
-    }, 500);
+  const setCategory = (next) => {
+    const qs = new URLSearchParams(params.toString());
+    if (next === "All") qs.delete("category");
+    else qs.set("category", next);
+    router.replace(`${pathname}${qs.toString() ? `?${qs}` : ""}`, { scroll: false });
   };
 
-  const { data: destinations = [], isLoading } = useQuery({
-    queryKey: ["destinations", category, debouncedSearch],
+  const { data: destinations = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["destinations", category, search],
     queryFn: async () => {
-      const params = {};
-      if (category !== "All") params.category = category;
-      if (debouncedSearch) params.search = debouncedSearch;
-      
-      const res = await api.get("/destinations", { params });
-      return res.data.data.destinations;
-    }
+      const query = { limit: 50 };
+      if (category !== "All") query.category = category;
+      if (search) query.search = search;
+      return (await api.get("/destinations", { params: query })).data.data.destinations;
+    },
   });
 
+  const filtered = category !== "All" || search;
+
   return (
-    <div className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header & Search */}
-      <div className="mb-16">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-4xl md:text-5xl font-extrabold text-white mb-6"
-        >
-          Explore <span className="text-gradient">Destinations</span>
-        </motion.h1>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="flex flex-col md:flex-row gap-4 max-w-3xl"
-        >
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <HiOutlineSearch className="h-5 w-5 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              value={searchInput}
-              onChange={handleSearchChange}
-              className="block w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              placeholder="Search destinations, countries, or vibes..."
-            />
-          </div>
-          <button className="flex items-center justify-center gap-2 px-6 py-3 glass hover:bg-white/10 rounded-xl text-white transition-all">
-            <HiOutlineFilter className="h-5 w-5" />
-            Filters
-          </button>
-        </motion.div>
+    <div className="mx-auto max-w-[1280px] px-5 pt-10 sm:px-8 lg:pt-14">
+      <header className="border-b-[3px] border-ink pb-6">
+        <h1 className="display text-[3.4rem] sm:text-[5rem]">Destinations</h1>
+        <p className="mt-3 max-w-[58ch] text-[1.1rem] text-ink-soft">
+          Curated places with the season to go, a daily budget range and the sights worth the trip. Pick one and the
+          planner starts from it.
+        </p>
+        <div className="relative mt-6 max-w-xl">
+          <label htmlFor="dest-search" className="sr-only">
+            Search destinations
+          </label>
+          <HiOutlineSearch aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
+          <input
+            id="dest-search"
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by place, country or what it’s known for"
+            className="h-12 w-full border-[1.5px] border-ink/30 bg-field pl-10 pr-10 text-[1rem] placeholder:text-placeholder focus:border-ink focus:shadow-[0_0_0_3px_var(--color-gold-wash)] focus:outline-none"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-muted hover:text-ink"
+            >
+              <HiOutlineX className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div role="group" aria-label="Filter by category" className="mt-6 flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+        {[{ name: "All", glyph: "squares" }, ...CATEGORIES].map((c) => {
+          const active = category === c.name;
+          return (
+            <button
+              key={c.name}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setCategory(c.name)}
+              className={`caps flex shrink-0 items-center gap-2 border-[1.5px] px-3 py-2 text-[0.82rem] transition-colors ${
+                active ? "border-ink bg-ink text-board" : "border-ink/25 text-ink-soft hover:border-ink hover:text-ink"
+              }`}
+            >
+              {c.name !== "All" && <Glyph kind={c.glyph} size={16} />}
+              {c.name}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Categories */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="flex overflow-x-auto pb-6 mb-10 gap-4 hide-scrollbar"
-      >
-        {CATEGORIES.map((cat, idx) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-medium transition-all ${
-              category === cat 
-                ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]" 
-                : "glass text-slate-300 hover:text-white hover:bg-white/10"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </motion.div>
+      <section aria-labelledby="results-title" className="mt-8">
+        <h2 id="results-title" className="caps mb-6 text-[0.85rem] text-muted" aria-live="polite">
+          {isLoading ? "Loading destinations" : `${destinations.length} ${destinations.length === 1 ? "destination" : "destinations"}`}
+          {category !== "All" && ` · ${category}`}
+          {search && ` · “${search}”`}
+        </h2>
 
-      {/* Grid */}
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-        </div>
-      ) : destinations.length === 0 ? (
-        <div className="text-center py-20">
-          <h3 className="text-xl text-white font-medium">No destinations found</h3>
-          <p className="text-slate-400 mt-2">Try adjusting your search or category filter.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {destinations.map((dest, idx) => (
-            <motion.div
-              key={dest._id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 * (idx % 3) }}
-              className="group glass-card overflow-hidden hover:ring-1 hover:ring-blue-500/50 transition-all cursor-pointer"
-            >
-              <div className="relative h-64 overflow-hidden">
-                <div className="absolute inset-0 bg-slate-800 animate-pulse" />
-                <Image
-                  src={dest.image || "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e"}
-                  alt={dest.name}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10">
-                  <span className="text-yellow-400 text-sm">★</span>
-                  <span className="text-white text-sm font-medium">{dest.rating}</span>
-                </div>
-                <div className="absolute bottom-4 left-4">
-                  <span className="bg-blue-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full">
-                    {dest.category}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
-                  {dest.name}
-                </h3>
-                <p className="text-slate-400 text-sm line-clamp-2 mb-4">
-                  {dest.description}
-                </p>
-                
-                <Link 
-                  href={`/destinations/${dest._id}`}
-                  className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1"
-                  onClick={(e) => e.stopPropagation()}
+        {isError ? (
+          <ErrorState title="Destinations didn’t load" onRetry={refetch}>
+            The server may be restarting. Try again in a moment.
+          </ErrorState>
+        ) : isLoading ? (
+          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[4/3]" />
+            ))}
+          </div>
+        ) : destinations.length === 0 ? (
+          <EmptyState
+            glyph="ring"
+            title="Nothing matches yet"
+            action={
+              filtered && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchInput("");
+                    setCategory("All");
+                  }}
                 >
-                  View Details <span>→</span>
-                </Link>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+                  Clear filters
+                </Button>
+              )
+            }
+          >
+            Try a country name, or another category.
+          </EmptyState>
+        ) : (
+          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {destinations.map((dest, i) => (
+              <DestinationPlate key={dest._id} dest={dest} priority={i < 3} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={null}>
+      <ExploreView />
+    </Suspense>
   );
 }

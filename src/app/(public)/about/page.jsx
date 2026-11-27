@@ -1,137 +1,99 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { HiOutlineLightBulb, HiOutlineGlobe, HiOutlineUsers } from "react-icons/hi";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
+import Link from "next/link";
+import { useGlobalStats } from "@/components/landing/LandingSections";
+import { buttonClasses } from "@/components/ui/Button";
+import { Glyph } from "@/components/ui/Feedback";
+
+const PRINCIPLES = [
+  {
+    glyph: "spiral",
+    title: "Show the plan",
+    body: "The proof is a real itinerary on screen, day by day, not a promise about one.",
+  },
+  {
+    glyph: "bars",
+    title: "Money is part of the plan",
+    body: "Budgets sit next to every decision: per trip, per category, and across all your travel.",
+  },
+  {
+    glyph: "steps",
+    title: "Rewrite, don’t restart",
+    body: "Change a plan by saying what you want different. The rest of it stays put.",
+  },
+  {
+    glyph: "ring",
+    title: "AI with visible limits",
+    body: "Drafts can be wrong. Opening hours, prices and entry rules are yours to check before you go.",
+  },
+];
 
 export default function AboutPage() {
-  const { data: globalStats } = useQuery({
-    queryKey: ["globalStats"],
-    queryFn: async () => {
-      const res = await api.get("/dashboard/global");
-      return res.data.data;
-    },
-  });
-
-  const stats = [
-    { label: "Destinations Covered", value: globalStats ? `${globalStats.totalDestinations}+` : "—" },
-    { label: "Active Users", value: globalStats ? `${globalStats.totalUsers}+` : "—" },
-    { label: "Trips Planned", value: globalStats ? `${globalStats.totalTrips}+` : "—" },
-  ];
+  const { data: stats } = useGlobalStats();
 
   return (
-    <div className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header Section */}
-      <div className="text-center mb-20">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-4xl md:text-5xl font-extrabold text-white mb-6"
-        >
-          About <span className="text-gradient">VoyageAI</span>
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-xl text-slate-400 max-w-3xl mx-auto"
-        >
-          We are on a mission to revolutionize how the world travels by combining cutting-edge artificial intelligence with deep local expertise.
-        </motion.p>
-      </div>
+    <div className="mx-auto max-w-[1280px] px-5 pt-10 sm:px-8 lg:pt-14">
+      <header className="grid gap-8 border-b-[3px] border-ink pb-10 lg:grid-cols-[1.2fr_1fr] lg:items-end">
+        <h1 className="display text-[3.4rem] sm:text-[5.2rem]">A trip planner that does the arithmetic.</h1>
+        <p className="text-[1.15rem] leading-relaxed text-ink-soft">
+          VoyageAI turns a destination, a number of days and a budget into a day-by-day plan using Google Gemini. You
+          refine it in plain language, save it with real dates, and keep it beside every other trip and what each one
+          costs.
+        </p>
+      </header>
 
-      {/* Story Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="glass-card p-2 rounded-3xl">
-            <div className="aspect-[4/3] rounded-2xl bg-slate-900 overflow-hidden relative border border-white/5 flex items-center justify-center">
-               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
-               <span className="text-6xl">🌍</span>
-            </div>
-          </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="space-y-6"
-        >
-          <h2 className="text-3xl font-bold text-white">Our Story</h2>
-          <p className="text-slate-400 leading-relaxed">
-            VoyageAI was born from a simple realization: travel planning is often more stressful than the trip itself. Between juggling dozens of tabs, calculating budgets, and trying to figure out logistics, the joy of anticipation gets lost.
-          </p>
-          <p className="text-slate-400 leading-relaxed">
-            We built an intelligent engine that understands your preferences, respects your budget, and crafts personalized itineraries that would take a human expert hours to assemble. Now, you can go from inspiration to a fully-booked plan in minutes.
-          </p>
-        </motion.div>
-      </div>
+      <section aria-labelledby="principles-title" className="mt-14">
+        <h2 id="principles-title" className="caps text-[1rem]">
+          What it holds itself to
+        </h2>
+        <ul className="mt-6 grid gap-px border-[1.5px] border-ink bg-ink sm:grid-cols-2 lg:grid-cols-4">
+          {PRINCIPLES.map((p) => (
+            <li key={p.title} className="bg-board p-6">
+              <Glyph kind={p.glyph} size={40} />
+              <h3 className="display mt-4 text-[1.8rem]">{p.title}</h3>
+              <p className="mt-2 text-ink-soft">{p.body}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      {/* Values Section */}
-      <div className="mb-24">
-        <h2 className="text-3xl font-bold text-white text-center mb-12">Our Core Values</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: HiOutlineLightBulb,
-              title: "Innovation First",
-              desc: "Constantly pushing the boundaries of what AI can do in the travel sector to deliver magical experiences.",
-              color: "text-blue-400",
-              bg: "bg-blue-500/20"
-            },
-            {
-              icon: HiOutlineGlobe,
-              title: "Authentic Exploration",
-              desc: "Guiding users not just to tourist traps, but to hidden gems and authentic cultural experiences.",
-              color: "text-emerald-400",
-              bg: "bg-emerald-500/20"
-            },
-            {
-              icon: HiOutlineUsers,
-              title: "Community Driven",
-              desc: "Building a platform that learns from the collective wisdom of travelers around the globe.",
-              color: "text-purple-400",
-              bg: "bg-purple-500/20"
-            }
-          ].map((value, idx) => (
-            <motion.div
-              key={value.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 + idx * 0.1 }}
-              className="glass-card p-8 text-center"
-            >
-              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-6 ${value.bg}`}>
-                <value.icon className={`h-8 w-8 ${value.color}`} />
+      <section aria-labelledby="built-title" className="mt-16 grid gap-10 lg:grid-cols-[1fr_1fr]">
+        <div>
+          <h2 id="built-title" className="display text-[2.4rem]">
+            How it’s built
+          </h2>
+          <p className="mt-3 max-w-[60ch] leading-relaxed text-ink-soft">
+            A Next.js front end talks to an Express and MongoDB API. Itineraries, rewrites and chat answers come from
+            Google Gemini, with automatic fallback to lighter models when the main one is busy. Sessions use HttpOnly
+            cookies; images are hosted on imgbb.
+          </p>
+        </div>
+        {stats && (
+          <dl className="grid grid-cols-3 gap-4 self-end border-t-[3px] border-ink pt-4">
+            {[
+              { v: stats.totalDestinations, l: "destinations" },
+              { v: stats.totalTrips, l: "trips planned" },
+              { v: stats.totalUsers, l: stats.totalUsers === 1 ? "traveler" : "travelers" },
+            ].map((s) => (
+              <div key={s.l}>
+                <dt className="sr-only">{s.l}</dt>
+                <dd>
+                  <span className="display tabular block text-[3rem] text-crimson">{s.v}</span>
+                  <span className="text-sm text-muted">{s.l}</span>
+                </dd>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-4">{value.title}</h3>
-              <p className="text-slate-400">{value.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </dl>
+        )}
+      </section>
 
-      {/* Stats Section */}
-      <div className="glass p-12 rounded-3xl border border-white/10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10 text-center">
-          {stats.map((stat, idx) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 + idx * 0.1 }}
-              className="pt-6 md:pt-0"
-            >
-              <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">{stat.value}</div>
-              <div className="text-sm font-medium text-slate-400 uppercase tracking-wider">{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
+      <div className="mt-16 flex flex-wrap gap-3">
+        <Link href="/register" className={buttonClasses({ size: "lg" })}>
+          Plan a trip
+        </Link>
+        <Link href="/explore" className={buttonClasses({ variant: "outline", size: "lg" })}>
+          Explore destinations
+        </Link>
       </div>
     </div>
   );

@@ -1,340 +1,509 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import {
-  HiOutlineSparkles,
-  HiOutlineLocationMarker,
-  HiOutlineCalendar,
-  HiOutlineCurrencyDollar,
-  HiOutlinePaperAirplane,
-  HiOutlineSave,
-  HiOutlineUser,
-} from "react-icons/hi";
-import Input from "@/components/common/Input";
-import Modal from "@/components/common/Modal";
-import api from "@/lib/api";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { HiArrowRight, HiOutlinePaperAirplane } from "react-icons/hi";
+import api from "@/lib/api";
+import { friendlyAiError } from "@/lib/aiErrors";
+import { formatMoney, formatDate } from "@/lib/format";
+import { Input, Select, Textarea } from "@/components/ui/Field";
+import Button from "@/components/ui/Button";
+import { ErrorState, Glyph, Loader, Skeleton } from "@/components/ui/Feedback";
 
-export default function AIPlannerPage() {
+const DRAFT_KEY = "voyageai.plannerDraft";
+
+const STYLES = [
+  { value: "balanced", label: "Balanced, a bit of everything" },
+  { value: "cultural", label: "Cultural & historical" },
+  { value: "relaxing", label: "Relaxing & slow" },
+  { value: "adventure", label: "Active & adventurous" },
+  { value: "foodie", label: "Food & drink" },
+];
+
+const REQUEST_IDEAS = ["No early mornings", "Vegetarian food", "Travelling with kids", "Public transport only", "One rest day"];
+const REFINE_IDEAS = ["Make day 2 more relaxed", "Add a food market", "Swap a museum for something outdoors", "Add a day trip"];
+
+const emptyBrief = { destination: "", duration: "7", budget: "2000", travelStyle: "balanced", specialRequests: "" };
+
+function readDraft() {
+  try {
+    return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function PlannerView() {
   const router = useRouter();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [itinerary, setItinerary] = useState(null);
-  const [formMeta, setFormMeta] = useState({ destination: "", duration: 0, budget: 0 });
+  const params = useSearchParams();
+  const queryClient = useQueryClient();
 
-  // Chat state
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
+  const [brief, setBrief] = useState(emptyBrief);
+  const [briefErrors, setBriefErrors] = useState({});
+  const [itinerary, setItinerary] = useState(null);
+  const [meta, setMeta] = useState(null); // the brief the current draft was generated from
+  const [messages, setMessages] = useState([]);
+  const [changed, setChanged] = useState([]);
+  const [status, setStatus] = useState("idle"); // idle | generating | error
+  const [error, setError] = useState("");
+  const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [startError, setStartError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const chatEndRef = useRef(null);
+  const [restored, setRestored] = useState(false);
+  const threadEnd = useRef(null);
+  const resultTop = useRef(null);
+
+  // Restore a draft from this session, then let URL params prefill the brief.
+  useEffect(() => {
+    const draft = readDraft();
+    let next = draft?.brief || emptyBrief;
+    if (draft?.itinerary) {
+      setItinerary(draft.itinerary);
+      setMeta(draft.meta);
+      setMessages(draft.messages || []);
+      setStartDate(draft.startDate || "");
+    }
+    const fromUrl = {
+      destination: params.get("destination"),
+      duration: params.get("duration"),
+      budget: params.get("budget"),
+    };
+    if (fromUrl.destination) {
+      next = {
+        ...next,
+        destination: fromUrl.destination,
+        ...(fromUrl.duration && { duration: fromUrl.duration }),
+        ...(fromUrl.budget && { budget: fromUrl.budget }),
+      };
+    }
+    setBrief(next);
+    setRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, isRefining]);
+    if (!restored) return;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ brief, itinerary, meta, messages, startDate }));
+  }, [restored, brief, itinerary, meta, messages, startDate]);
 
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  useEffect(() => {
+    threadEnd.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [messages, isRefining]);
+
+  const setField = (key) => (e) => setBrief((b) => ({ ...b, [key]: e.target.value }));
+
+  const addRequest = (text) =>
+    setBrief((b) => ({
+      ...b,
+      specialRequests: b.specialRequests ? `${b.specialRequests.replace(/[.\s]+$/, "")}. ${text}` : text,
+    }));
+
+  const validate = () => {
+    const errs = {};
+    if (!brief.destination.trim()) errs.destination = "Where do you want to go?";
+    const d = Number(brief.duration);
+    if (!Number.isInteger(d) || d < 1 || d > 30) errs.duration = "Between 1 and 30 days";
+    if (!(Number(brief.budget) > 0)) errs.budget = "Add a budget above $0";
+    setBriefErrors(errs);
+    return !Object.keys(errs).length;
+  };
+
+  const generate = async (e) => {
+    e?.preventDefault();
+    if (!validate()) return;
     const data = {
-      destination: formData.get("destination"),
-      duration: Number(formData.get("duration")),
-      budget: Number(formData.get("budget")),
-      travelStyle: formData.get("travelStyle"),
-      specialRequests: formData.get("specialRequests"),
+      destination: brief.destination.trim(),
+      duration: Number(brief.duration),
+      budget: Number(brief.budget),
+      travelStyle: brief.travelStyle,
+      specialRequests: brief.specialRequests,
     };
-
-    setIsGenerating(true);
-    setItinerary(null);
-    setChatMessages([]);
-
+    setStatus("generating");
+    setError("");
+    setChanged([]);
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setTimeout(() => resultTop.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    }
     try {
       const res = await api.post("/ai/plan", data);
       setItinerary(res.data.data);
-      setFormMeta({ destination: data.destination, duration: data.duration, budget: data.budget });
-      setChatMessages([
-        { id: 1, role: "ai", content: "Here's your itinerary! Want to tweak anything? Tell me what to change and I'll update it." },
-      ]);
-      setShowModal(true);
+      setMeta(data);
+      setMessages([]);
+      setStatus("idle");
     } catch (err) {
-      toast.error(err.message || "Failed to generate itinerary. Please try again.");
-    } finally {
-      setIsGenerating(false);
+      setError(friendlyAiError(err, "The planner couldn’t draft this trip."));
+      setStatus("error");
     }
   };
 
-  const handleRefine = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isRefining || !itinerary) return;
-
-    const userMsg = { id: Date.now(), role: "user", content: chatInput };
-    setChatMessages((prev) => [...prev, userMsg]);
-    const instructions = chatInput;
-    setChatInput("");
+  const refine = async (text) => {
+    const instructions = (text ?? refineInput).trim();
+    if (!instructions || isRefining || !itinerary) return;
+    setMessages((m) => [...m, { id: Date.now(), role: "user", content: instructions }]);
+    setRefineInput("");
     setIsRefining(true);
-
     try {
       const res = await api.post("/ai/refine", { itinerary, instructions });
-      setItinerary(res.data.data);
-      setChatMessages((prev) => [
-        ...prev,
-        { id: Date.now(), role: "ai", content: "Done! I've updated the itinerary. Check it out above." },
+      const updated = res.data.data;
+      const before = new Map((itinerary.days || []).map((d) => [d.day, JSON.stringify(d)]));
+      const diff = (updated.days || []).filter((d) => before.get(d.day) !== JSON.stringify(d)).map((d) => d.day);
+      setItinerary(updated);
+      setChanged(diff);
+      setMessages((m) => [
+        ...m,
+        {
+          id: Date.now() + 1,
+          role: "ai",
+          content: diff.length
+            ? `Updated ${diff.length === 1 ? `day ${diff[0]}` : `days ${diff.join(", ")}`}. Changes are marked in the plan.`
+            : "Done. The plan is updated.",
+        },
       ]);
     } catch (err) {
-      toast.error(err.message || "Failed to refine itinerary.");
-      setChatMessages((prev) => [
-        ...prev,
-        { id: Date.now(), role: "ai", content: "Sorry, I couldn't process that change. Please try again." },
+      setMessages((m) => [
+        ...m,
+        { id: Date.now() + 1, role: "error", content: friendlyAiError(err, "That change didn’t go through. Try again.") },
       ]);
     } finally {
       setIsRefining(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!itinerary) return;
+  const discard = () => {
+    setItinerary(null);
+    setMeta(null);
+    setMessages([]);
+    setChanged([]);
+    setStartDate("");
+    setStatus("idle");
+  };
+
+  const save = async () => {
+    if (!itinerary || !meta) return;
+    if (!startDate) {
+      setStartError("Pick the day the trip starts.");
+      return;
+    }
+    setStartError("");
     setIsSaving(true);
-
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + formMeta.duration);
-
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + Math.max(meta.duration - 1, 0));
     try {
-      await api.post("/trips", {
+      const res = await api.post("/trips", {
         title: itinerary.title,
-        destination: formMeta.destination,
-        startDate: today.toISOString(),
-        endDate: endDate.toISOString(),
-        budget: formMeta.budget,
+        destination: meta.destination,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        budget: meta.budget,
         itinerary: itinerary.days,
       });
-      toast.success("Trip saved successfully!");
-      setShowModal(false);
-      router.push("/my-trips");
+      ["trips", "dashboardStats"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+      sessionStorage.removeItem(DRAFT_KEY);
+      toast.success("Trip saved.");
+      const id = res.data?.data?._id;
+      router.push(id ? `/dashboard/trips/${id}` : "/my-trips");
     } catch (err) {
-      toast.error(err.message || "Failed to save trip.");
-    } finally {
+      toast.error(err.message || "Couldn’t save the trip. Try again.");
       setIsSaving(false);
     }
   };
 
+  const perDay = meta ? Math.round(meta.budget / meta.duration) : null;
+  const styleLabel = meta && STYLES.find((s) => s.value === meta.travelStyle)?.label;
+  const today = new Date().toISOString().split("T")[0];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 mb-4 border border-purple-500/30">
-          <HiOutlineSparkles className="h-8 w-8 text-purple-400" />
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">AI Trip Planner</h1>
-        <p className="text-slate-400 max-w-2xl mx-auto">
-          Tell us about your dream vacation, and our AI will craft a personalized itinerary optimized for your budget and preferences.
+    <div>
+      <header className="border-b-[3px] border-ink pb-5">
+        <h1 className="display text-[2.6rem] sm:text-[3.25rem]">Plan with AI</h1>
+        <p className="mt-2 max-w-[62ch] text-[1.02rem] text-ink-soft">
+          Describe the trip, get a day-by-day draft, then change it by saying what you want different. Nothing is saved
+          until you save it.
         </p>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Input Form */}
-        <div className="lg:col-span-5">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="glass-card p-6 sticky top-24"
-          >
-            <form onSubmit={handleGenerate} className="space-y-6">
-              <Input
-                id="destination"
-                name="destination"
-                label="Where do you want to go?"
-                placeholder="e.g. Kyoto, Japan"
-                icon={HiOutlineLocationMarker}
-                required
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="duration"
-                  name="duration"
-                  label="Duration (days)"
-                  type="number"
-                  placeholder="7"
-                  icon={HiOutlineCalendar}
-                  required
-                />
-                <Input
-                  id="budget"
-                  name="budget"
-                  label="Budget ($)"
-                  type="number"
-                  placeholder="2000"
-                  icon={HiOutlineCurrencyDollar}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Travel Style</label>
-                <select name="travelStyle" className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none">
-                  <option value="balanced">Balanced (Mix of everything)</option>
-                  <option value="cultural">Cultural & Historical</option>
-                  <option value="relaxing">Relaxing & Leisure</option>
-                  <option value="adventure">Action & Adventure</option>
-                  <option value="foodie">Food & Culinary</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Any special requests?</label>
-                <textarea
-                  name="specialRequests"
-                  rows={3}
-                  className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"
-                  placeholder="e.g. Vegetarian food only, no early mornings..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isGenerating}
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isGenerating ? (
-                  <>
-                    <HiOutlineSparkles className="animate-spin h-5 w-5 mr-2" />
-                    Crafting Magic...
-                  </>
-                ) : (
-                  <>
-                    <HiOutlineSparkles className="h-5 w-5 mr-2" />
-                    Generate Itinerary
-                  </>
-                )}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-
-        {/* Output Area — placeholder only */}
-        <div className="lg:col-span-7">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="h-full min-h-[500px] glass-card p-6 flex flex-col items-center justify-center text-center"
-          >
-            {isGenerating ? (
-              <div className="flex flex-col items-center justify-center">
-                <div className="relative w-24 h-24 mb-8">
-                  <div className="absolute inset-0 border-t-4 border-purple-500 rounded-full animate-spin" />
-                  <div className="absolute inset-2 border-r-4 border-blue-500 rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
-                  <div className="absolute inset-4 border-b-4 border-emerald-500 rounded-full animate-spin" style={{ animationDuration: "2s" }} />
-                </div>
-                <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 animate-pulse">
-                  Analyzing millions of possibilities...
-                </h3>
-                <p className="text-slate-400 mt-2">Optimizing routes and checking local insights.</p>
-              </div>
-            ) : (
-              <div className="text-slate-500 max-w-sm mx-auto">
-                <div className="text-6xl mb-4">🪄</div>
-                <h3 className="text-xl font-medium text-slate-300 mb-2">Ready to plan</h3>
-                <p>Fill out the details on the left and let our AI create the perfect itinerary for you.</p>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Itinerary Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={itinerary?.title} maxWidth="max-w-5xl">
-        {itinerary && (
-          <div className="flex flex-col gap-6">
-            {/* Itinerary Timeline */}
-            <div className="space-y-6">
-              {itinerary.days?.map((day) => (
-                <div key={day.day} className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-0.5 before:bg-white/10 last:before:hidden">
-                  <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-xs font-bold text-purple-400">
-                    {day.day}
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-3">{day.title}</h3>
-                  <div className="space-y-2">
-                    {day.activities?.map((activity, idx) => (
-                      <div key={idx} className="bg-white/5 border border-white/5 rounded-lg p-3 text-slate-300 text-sm">
-                        {activity}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-12">
+        {/* Brief */}
+        <form onSubmit={generate} noValidate className="space-y-5 lg:sticky lg:top-8 lg:self-start" aria-labelledby="brief-title">
+          <h2 id="brief-title" className="caps border-b border-ink pb-2 text-[0.95rem]">
+            The brief
+          </h2>
+          <Input
+            label="Where to"
+            placeholder="Kyoto, Japan"
+            value={brief.destination}
+            onChange={setField("destination")}
+            error={briefErrors.destination}
+            autoComplete="off"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Days"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={30}
+              value={brief.duration}
+              onChange={setField("duration")}
+              error={briefErrors.duration}
+            />
+            <Input
+              label="Budget"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              prefix="$"
+              value={brief.budget}
+              onChange={setField("budget")}
+              error={briefErrors.budget}
+            />
+          </div>
+          <Select label="Travel style" value={brief.travelStyle} onChange={setField("travelStyle")}>
+            {STYLES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+          <div>
+            <Textarea
+              label="Anything else"
+              optional
+              rows={3}
+              value={brief.specialRequests}
+              onChange={setField("specialRequests")}
+              placeholder="Pace, food, mobility, who’s coming…"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Add a common request">
+              {REQUEST_IDEAS.map((idea) => (
+                <button
+                  key={idea}
+                  type="button"
+                  onClick={() => addRequest(idea)}
+                  className="border border-ink/25 px-2 py-1 text-[0.82rem] text-ink-soft transition-colors hover:border-ink hover:text-ink"
+                >
+                  + {idea}
+                </button>
               ))}
             </div>
+          </div>
+          <Button type="submit" size="lg" className="w-full justify-between" loading={status === "generating"}>
+            {status === "generating" ? "Drafting" : itinerary ? "Draft again from this brief" : "Draft the plan"}
+            {status !== "generating" && <HiArrowRight className="h-5 w-5" aria-hidden="true" />}
+          </Button>
+          {itinerary && status !== "generating" && (
+            <p className="text-sm text-muted">Drafting again replaces the current plan and its changes.</p>
+          )}
+        </form>
 
-            {/* Divider */}
-            <div className="border-t border-white/10" />
-
-            {/* Chat to Tweak */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Tweak your itinerary</h3>
-              <div className="max-h-48 overflow-y-auto space-y-3 mb-3">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                      <div className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center ${msg.role === "user" ? "ml-2 bg-blue-600" : "mr-2 bg-purple-600"}`}>
-                        {msg.role === "user" ? <HiOutlineUser className="h-3.5 w-3.5 text-white" /> : <span className="text-xs">✨</span>}
-                      </div>
-                      <div className={`px-3 py-2 rounded-xl text-sm ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-none" : "bg-slate-800 border border-white/10 text-slate-200 rounded-tl-none"}`}>
-                        {msg.content}
-                      </div>
+        {/* Output */}
+        <section ref={resultTop} aria-labelledby="plan-title" aria-busy={status === "generating"} className="min-w-0 scroll-mt-20">
+          {status === "generating" ? (
+            <div className="border-[1.5px] border-ink bg-field p-6">
+              <Loader label={`Drafting ${brief.duration} days in ${brief.destination}`} />
+              <p className="mt-2 text-sm text-muted">This usually takes 10 to 30 seconds.</p>
+              <div className="mt-6 space-y-4">
+                {Array.from({ length: Math.min(Number(brief.duration) || 3, 5) }).map((_, i) => (
+                  <div key={i} className="grid grid-cols-[56px_1fr] gap-4 border-b border-ink/10 pb-4">
+                    <Skeleton className="h-10 w-10" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-3 w-2/3" />
                     </div>
                   </div>
                 ))}
-                {isRefining && (
-                  <div className="flex justify-start">
-                    <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-800 border border-white/10">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
-                    </div>
+              </div>
+            </div>
+          ) : status === "error" ? (
+            <ErrorState title="The draft didn’t come through" onRetry={() => generate()}>
+              {error}
+            </ErrorState>
+          ) : itinerary ? (
+            <div>
+              <h2 id="plan-title" className="display text-[2.4rem] sm:text-[3rem]">
+                {itinerary.title}
+              </h2>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="caps flex items-center gap-2 text-[0.75rem] text-crimson">
+                  <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full border-2 border-crimson" />
+                  Draft, not saved yet
+                </p>
+                <Button variant="ghost" size="sm" onClick={discard}>
+                  Discard draft
+                </Button>
+              </div>
+              {meta && (
+                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-ink-soft">
+                  <span>{meta.destination}</span>
+                  <span className="tabular">{meta.duration} days</span>
+                  <span className="tabular">
+                    {formatMoney(meta.budget)} · about {formatMoney(perDay)} a day
+                  </span>
+                  {styleLabel && <span>{styleLabel}</span>}
+                </p>
+              )}
+
+              <ol className="mt-6 border-t-[3px] border-ink">
+                {itinerary.days?.map((day) => {
+                  const isNew = changed.includes(day.day);
+                  return (
+                    <li
+                      key={day.day}
+                      className={`grid grid-cols-[56px_1fr] gap-4 border-b border-ink/15 py-5 sm:grid-cols-[72px_1fr] ${
+                        isNew ? "fade-up bg-gold-wash/60 px-3 sm:-mx-3" : ""
+                      }`}
+                    >
+                      <span className="display tabular text-[2.6rem] leading-none text-crimson sm:text-[3.2rem]">{day.day}</span>
+                      <div className="min-w-0">
+                        <h3 className="flex flex-wrap items-center gap-x-3 text-[1.15rem] font-semibold leading-snug">
+                          {day.title}
+                          {isNew && <span className="caps bg-ink px-1.5 py-0.5 text-[0.65rem] text-board">Rewritten</span>}
+                        </h3>
+                        <ul className="mt-2 space-y-1.5 text-ink-soft">
+                          {day.activities?.map((a, i) => (
+                            <li key={i} className="flex gap-3">
+                              <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 bg-ink" />
+                              <span>{a}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="mt-3 text-sm text-muted">
+                AI drafts can be wrong. Check opening hours, prices and bookings before you go.
+              </p>
+
+              {/* Refine thread */}
+              <div className="mt-10">
+                <h3 className="caps border-b border-ink pb-2 text-[0.95rem]">Change the plan</h3>
+                {messages.length > 0 && (
+                  <ul className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1" aria-live="polite">
+                    {messages.map((m) => (
+                      <li key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                        <p
+                          className={`max-w-[85%] break-words px-3.5 py-2 text-[0.95rem] ${
+                            m.role === "user"
+                              ? "bg-ink text-board"
+                              : m.role === "error"
+                                ? "border-[1.5px] border-crimson bg-crimson-wash/60 text-ink"
+                                : "border-[1.5px] border-ink/25 bg-field text-ink"
+                          }`}
+                        >
+                          {m.content}
+                        </p>
+                      </li>
+                    ))}
+                    {isRefining && (
+                      <li>
+                        <Loader label="Rewriting" />
+                      </li>
+                    )}
+                    <li ref={threadEnd} aria-hidden="true" />
+                  </ul>
+                )}
+                <form
+                  className="mt-4 flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    refine();
+                  }}
+                >
+                  <label htmlFor="refine-input" className="sr-only">
+                    What should change?
+                  </label>
+                  <input
+                    id="refine-input"
+                    value={refineInput}
+                    onChange={(e) => setRefineInput(e.target.value)}
+                    disabled={isRefining}
+                    placeholder="e.g. Make day 2 slower and add a food market"
+                    className="h-11 min-w-0 flex-1 border-[1.5px] border-ink/30 bg-field px-3 placeholder:text-placeholder focus:border-ink focus:shadow-[0_0_0_3px_var(--color-gold-wash)] focus:outline-none disabled:opacity-60"
+                  />
+                  <Button type="submit" variant="ink" size="icon" disabled={!refineInput.trim() || isRefining} aria-label="Send change">
+                    <HiOutlinePaperAirplane className="h-5 w-5 rotate-90" aria-hidden="true" />
+                  </Button>
+                </form>
+                {messages.length === 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {REFINE_IDEAS.map((idea) => (
+                      <button
+                        key={idea}
+                        type="button"
+                        disabled={isRefining}
+                        onClick={() => refine(idea)}
+                        className="border border-ink/25 px-2 py-1 text-[0.82rem] text-ink-soft transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+                      >
+                        {idea}
+                      </button>
+                    ))}
                   </div>
                 )}
-                <div ref={chatEndRef} />
               </div>
 
-              <form onSubmit={handleRefine} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="e.g. Make Day 2 more relaxed, add a food market visit..."
-                  disabled={isRefining}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim() || isRefining}
-                  className="p-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(168,85,247,0.4)]"
-                >
-                  <HiOutlinePaperAirplane className="h-4 w-4 transform rotate-90" />
-                </button>
-              </form>
+              {/* Save */}
+              <div className="mt-10 border-[3px] border-ink bg-field p-5">
+                <h3 className="display text-[1.8rem]">Keep this plan</h3>
+                <p className="mt-1 text-ink-soft">
+                  Pick a start date. The trip runs {meta?.duration} days
+                  {startDate && meta ? `, ending ${formatDate(new Date(new Date(`${startDate}T00:00:00Z`).getTime() + (meta.duration - 1) * 86400000))}` : ""}.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <Input
+                    label="Starts"
+                    type="date"
+                    min={today}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    error={startError}
+                    className="sm:max-w-[220px]"
+                  />
+                  <Button onClick={save} size="lg" loading={isSaving} disabled={isRefining} className="sm:mt-[26px]">
+                    {isSaving ? "Saving" : "Save trip"}
+                  </Button>
+                </div>
+              </div>
             </div>
-
-            {/* Divider */}
-            <div className="border-t border-white/10" />
-
-            {/* Save Button */}
-            <div className="flex justify-end">
-              <button
-                onClick={handleSave}
-                disabled={isSaving || isRefining}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <HiOutlineSave className="h-5 w-5" />
-                {isSaving ? "Saving..." : "Save Trip"}
-              </button>
+          ) : (
+            <div className="border-[1.5px] border-dashed border-ink/35 p-6 sm:p-10">
+              <Glyph kind="spiral" size={56} />
+              <h2 id="plan-title" className="display mt-5 text-[2.2rem]">
+                Your plan will appear here
+              </h2>
+              <ol className="mt-5 space-y-3 text-ink-soft">
+                {[
+                  "Fill in the brief: where, how many days and the budget.",
+                  "Read the day-by-day draft as soon as it arrives.",
+                  "Ask for changes in plain words. Rewritten days are marked.",
+                  "Pick a start date and save it as a trip.",
+                ].map((t, i) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="display tabular w-5 shrink-0 text-[1.4rem] leading-none text-crimson">{i + 1}</span>
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-6 text-sm text-muted">Drafts are kept in this browser tab until you save or discard them.</p>
             </div>
-          </div>
-        )}
-      </Modal>
+          )}
+        </section>
+      </div>
     </div>
+  );
+}
+
+export default function AIPlannerPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlannerView />
+    </Suspense>
   );
 }

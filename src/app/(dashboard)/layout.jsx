@@ -1,38 +1,30 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import Sidebar from "@/components/layout/Sidebar";
+import AppShell from "@/components/layout/AppShell";
+import { Loader } from "@/components/ui/Feedback";
 
 export default function DashboardLayout({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      const next = typeof window !== "undefined" ? window.location.pathname + window.location.search : pathname;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin" />
+      <div className="flex min-h-dvh items-center justify-center">
+        <Loader label={loading ? "Opening your trips" : "Redirecting to sign in"} />
       </div>
     );
   }
 
-  if (!user) return null;
-
-  return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 overflow-y-auto min-h-[calc(100vh-80px)] p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto w-full">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
+  return <AppShell>{children}</AppShell>;
 }

@@ -1,159 +1,47 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineCurrencyDollar } from "react-icons/hi";
-import { toast } from "sonner";
-import Input from "@/components/common/Input";
-import ImageUpload from "@/components/common/ImageUpload";
-import api from "@/lib/api";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import api from "@/lib/api";
+import PageHeader from "@/components/ui/PageHeader";
+import TripForm from "@/components/trips/TripForm";
 
-const destinationSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters."),
-  destination: z.string().min(2, "Destination is required."),
-  startDate: z.string().min(1, "Start date is required."),
-  endDate: z.string().min(1, "End date is required."),
-  budget: z.string().min(1, "Budget is required."),
-  notes: z.string().optional(),
-  coverImage: z.string().optional(),
-});
-
-export default function AddDestinationPage() {
+export default function NewTripPage() {
   const router = useRouter();
-  
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(destinationSchema),
-    defaultValues: {
-      coverImage: "",
-    },
-  });
-
-  const coverImage = watch("coverImage");
+  const queryClient = useQueryClient();
 
   const onSubmit = async (data) => {
     try {
-      await api.post("/trips", data);
-      toast.success("Destination added successfully!");
-      router.push("/my-trips");
+      const res = await api.post("/trips", data);
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+      toast.success("Trip added.");
+      const id = res.data?.data?._id;
+      router.push(id ? `/dashboard/trips/${id}` : "/my-trips");
     } catch (error) {
-      toast.error(error.message || "Failed to add destination. Please try again.");
+      toast.error(error.message || "Couldn’t add the trip. Try again.");
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Add Destination</h1>
-        <p className="text-slate-400 mt-1">Start planning a new trip by adding the destination details.</p>
+    <div>
+      <PageHeader
+        title="New trip"
+        description={
+          <>
+            Add a trip you’ve already worked out. Want a draft instead?{" "}
+            <Link href="/ai-planner" className="ink-link font-semibold text-ink">
+              Plan it with AI
+            </Link>
+            .
+          </>
+        }
+      />
+      <div className="mt-8">
+        <TripForm onSubmit={onSubmit} submitLabel="Add trip" busyLabel="Adding trip" />
       </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card p-6 md:p-8"
-      >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <ImageUpload
-            value={coverImage}
-            onChange={(url) => setValue("coverImage", url)}
-          />
-
-          <Input
-            id="title"
-            label="Trip Title"
-            type="text"
-            placeholder="e.g., Summer in Japan"
-            {...register("title")}
-            error={errors.title}
-          />
-
-          <Input
-            id="destination"
-            label="Destination"
-            type="text"
-            icon={HiOutlineLocationMarker}
-            placeholder="City, Country, or Region"
-            {...register("destination")}
-            error={errors.destination}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              id="startDate"
-              label="Start Date"
-              type="date"
-              icon={HiOutlineCalendar}
-              {...register("startDate")}
-              error={errors.startDate}
-            />
-            <Input
-              id="endDate"
-              label="End Date"
-              type="date"
-              icon={HiOutlineCalendar}
-              {...register("endDate")}
-              error={errors.endDate}
-            />
-          </div>
-
-          <Input
-            id="budget"
-            label="Estimated Budget (USD)"
-            type="number"
-            icon={HiOutlineCurrencyDollar}
-            placeholder="3500"
-            {...register("budget")}
-            error={errors.budget}
-          />
-
-          <div className="w-full">
-            <label htmlFor="notes" className="block text-sm font-medium text-slate-300 mb-2">
-              Initial Notes (Optional)
-            </label>
-            <textarea
-              id="notes"
-              rows={4}
-              className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-              placeholder="Any specific places to visit, dietary requirements, or ideas..."
-              {...register("notes")}
-            />
-          </div>
-
-          <div className="pt-4 flex items-center justify-end space-x-4 border-t border-white/10">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2.5 text-sm font-medium text-slate-300 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                "Save Destination"
-              )}
-            </button>
-          </div>
-        </form>
-      </motion.div>
     </div>
   );
 }
